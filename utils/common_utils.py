@@ -207,7 +207,11 @@ class PhotoSet(Dataset):
         # samples['gth_preset'] = torch.from_numpy(gth_preset).float()
         # samples['pairs'] = pairs
         if self.transform is not None:
-            samples = self.transform(samples)
+            # samples = self.transform(samples)
+            samples['reference'] = self.transform(samples['reference'])
+            samples['positive_reference'] = self.transform(samples['positive_reference'])
+            samples['img'] = self.transform(samples['img'])
+            samples['gth_img'] = self.transform(samples['gth_img'])
         
         
         samples['gth_preset'] = torch.from_numpy(gth_preset).float()

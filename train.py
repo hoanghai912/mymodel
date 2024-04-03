@@ -404,14 +404,21 @@ def main():
     #         transforms.CenterCrop(256),
     #         ])
 
-    import custom_transform as tr
+    # import custom_transform as tr
+    # composed_transforms = transforms.Compose([
+    #     tr.RandomCrop(cropsize=(256,256)),
+    #     # tr.RandomHorizontalFlip(),
+    #     # tr.RandomVerticalFlip(),
+    #     # tr.RandomRotation(degrees=[0,90,180,270], size=args.crop_size),
+    #     tr.ToTensor()
+    #     ])
+
     composed_transforms = transforms.Compose([
-        tr.RandomCrop(cropsize=(256,256)),
-        # tr.RandomHorizontalFlip(),
-        # tr.RandomVerticalFlip(),
-        # tr.RandomRotation(degrees=[0,90,180,270], size=args.crop_size),
-        tr.ToTensor()
-        ])
+            transforms.ToTensor(),
+            transforms.Resize(256),
+            transforms.CenterCrop(256),
+            ])
+
 
     dataset = PhotoSet(args.path_imgnet_train, transform=composed_transforms)
 
