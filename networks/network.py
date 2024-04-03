@@ -40,9 +40,9 @@ class Netv2(nn.Module):
 
         self.pdfc1 = nn.Sequential(
             nn.Linear(self.linear_in, pddims[0]),
-            nn.LeakyReLU(0.1),
+            nn.ReLU(),
             nn.Linear(pddims[0], pddims[1]),
-            nn.LeakyReLU(0.1)
+            nn.ReLU()
         )
 
         self.pdfc2 = nn.Sequential(

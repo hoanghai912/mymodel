@@ -30,7 +30,8 @@ class BasicLayer(nn.Module):
     kernels=[3,3],
     subsampling="none",
     norms=["evo", "evo"],
-    acts=[nn.LeakyReLU(0.1), nn.LeakyReLU(0.1)]):
+    # acts=[nn.LeakyReLU(0.1), nn.LeakyReLU(0.1)]):
+    acts=[nn.ReLU(), nn.ReLU()]):
         super(BasicLayer, self).__init__()
         assert len(block_names) == 2
         self.subsampler = get_subsampler(subsampling, in_channels) if subsampling != "none" else None
@@ -51,8 +52,8 @@ class ResLayer(nn.Module):
     def __init__(self, in_channels, out_channels, block_names=["ConvBlock", "ConvBlock"]):
         super(ResLayer, self).__init__()
         assert len(block_names) == 2
-        self.block1 = get_block(block_names[0])(in_channels, out_channels, act=nn.LeakyReLU(0.1))
-        self.block2 = get_block(block_names[1])(out_channels, out_channels, act=nn.LeakyReLU(0.1))
+        self.block1 = get_block(block_names[0])(in_channels, out_channels, act=nn.ReLU())
+        self.block2 = get_block(block_names[1])(out_channels, out_channels, act=nn.ReLU())
 
     def forward(self, X, _skip_feat=None):
         if _skip_feat is not None:
@@ -70,7 +71,7 @@ def get_block(block_name):
     }[block_name]
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, groups=1, act=nn.LeakyReLU(0.1), norm="none"):
+    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, groups=1, act=nn.ReLU(), norm="none"):
         super(ConvBlock, self).__init__()
         padding = (kernel_size - 1) // 2
         layers = []
