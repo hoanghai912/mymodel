@@ -239,6 +239,7 @@ def train(dev, world_size, config, args,
         sampler.set_epoch(epoch)
         tbar = tqdm(dataloader)
         tbar.set_description('epoch: %03d' % epoch)
+        loss_generator = loss_dis_train = loss_encoder_t_train = None
         for i, data_sample in enumerate(tbar):
             EG.train()
 
@@ -291,7 +292,8 @@ def train(dev, world_size, config, args,
                 loss_encoderT = loss_encoder_t(preset, gth_preset, preset_emb, positive_ref_emb)
                 
 
-            scaler.scale(loss + loss_encoderT).backward()
+            scaler.scale(loss).backward(retain_graph=True)
+            scaler.scale(loss_encoderT).backward()
             scaler.step(optimizer_g)
             scaler.update()
 
@@ -331,8 +333,16 @@ def train(dev, world_size, config, args,
             # if num_iter % args.interval_save_test == 0 and is_main_dev:
             #     make_log_img(EG, args.dim_z, writer, args, sample_valid,
             #             dev, num_iter, 'valid_ema', ema=ema_g)
-
+            
+            loss_generator = loss
+            loss_dis_train = loss_d
+            loss_encoder_t_train = loss_encoderT
             num_iter += 1
+        
+        print("Loss_g =", loss_generator)
+        print("Loss_discriminator =", loss_dis_train)
+        print("Loss_encoder_t =", loss_encoder_t_train)
+        print("Loss EG =", loss_generator + loss_encoder_t_train)
 
         # Save Model
         if is_main_dev:

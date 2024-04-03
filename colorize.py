@@ -74,19 +74,17 @@ def main(args):
     grays = ImageFolder(args.path_imgnet_val,
                         transform=transforms.Compose([
                             transforms.ToTensor(),
-                            transforms.Resize(256),
-                            transforms.CenterCrop(256),
-                            transforms.Normalize((0.5,), (0.5,)),
+                            transforms.Resize((256,256)),
                             transforms.Grayscale()]))
 
     ref = Image.open(path_ref)
     custom_transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.5,), (0.5,)),
+        transforms.Resize(256),
         transforms.CenterCrop(256)
     ])
     ref = custom_transform(ref)
-    print(ref.shape)
+
     EG = Colorizer(config, 
                    args.path_ckpt_g,
                    args_loaded.norm_type,
@@ -174,7 +172,6 @@ def main(args):
         else:
             im = ToPILImage()(lab_fusion)
         im.save('%s/%05d.jpg' % (args.path_output, i))
-        print(p_vec.shape)
 
 
 def fusion(img_gray, img_rgb):
