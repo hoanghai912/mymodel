@@ -49,11 +49,11 @@ def parse_args():
     # IO
     parser.add_argument('--path_log', default='runs')
     parser.add_argument('--path_ckpts', default='ckpts')
-    parser.add_argument('--path_config', default='/content/pre_trained/config.pickle')
-    parser.add_argument('--path_vgg', default='/content/pre_trained/vgg16.pickle')
-    parser.add_argument('--path_ckpt_g', default='/content/pre_trained/G_ema_256.pth')
-    parser.add_argument('--path_ckpt_d', default='/content/pre_trained/D_256.pth')
-    parser.add_argument('--path_imgnet_train', default='/content/sub-train')
+    parser.add_argument('--path_config', default='/kaggle/working/pre_trained/config.pickle')
+    parser.add_argument('--path_vgg', default='/kaggle/working/pre_trained/vgg16.pickle')
+    parser.add_argument('--path_ckpt_g', default='/kaggle/working/pre_trained/G_ema_256.pth')
+    parser.add_argument('--path_ckpt_d', default='/kaggle/working/pre_trained/D_256.pth')
+    parser.add_argument('--path_imgnet_train', default='/kaggle/working/sub-train')
     parser.add_argument('--path_imgnet_val', default='./imgnet/val')
 
     parser.add_argument('--index_target', type=int, nargs='+', 

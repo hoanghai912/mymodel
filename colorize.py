@@ -22,11 +22,11 @@ def parse():
     parser.add_argument('--seed', type=int, default=2)
 
     # I/O
-    parser.add_argument('--path_config', default='/content/pre_trained/config.pickle')
-    parser.add_argument('--path_ckpt_g', default='/content/pre_trained/G_ema_256.pth')
-    parser.add_argument('--path_ckpt', default='/content/ckpts/unknown')
+    parser.add_argument('--path_config', default='/kaggle/working/pre_trained/config.pickle')
+    parser.add_argument('--path_ckpt_g', default='/kaggle/working/pre_trained/G_ema_256.pth')
+    parser.add_argument('--path_ckpt', default='/kaggle/working/ckpts/unknown')
     parser.add_argument('--path_output', default='./results')
-    parser.add_argument('--path_imgnet_val', default='/content/sub-train/train/0')
+    parser.add_argument('--path_imgnet_val', default='/kaggle/working/sub-train/train/0')
 
     parser.add_argument('--use_ema', action='store_true')
     parser.add_argument('--no_upsample', action='store_true')
@@ -56,7 +56,7 @@ def main(args):
     path_eg_ema = join(args.path_ckpt, 'EG_EMA_%03d.ckpt' % args.epoch)
     path_args = join(args.path_ckpt, 'args.pkl')
 
-    path_ref = "/content/ref/n02966193_15570.jpg"
+    path_ref = "/kaggle/working/ref/n02966193_15570.jpg"
 
     if not exists(path_eg):
         raise FileNotFoundError(path_eg)
