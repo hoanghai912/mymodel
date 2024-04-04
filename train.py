@@ -312,8 +312,6 @@ def train(dev, world_size, config, args,
 
             loss_dic['loss_d'] = loss_d
 
-            print("loss G", loss + loss_encoderT, " --- ", "loss D", loss_d)
-
             # Logger
             # if num_iter % args.interval_save_loss == 0 and is_main_dev:
             #     make_log_scalar(writer, num_iter, loss_dic)
