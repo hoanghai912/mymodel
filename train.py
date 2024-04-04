@@ -245,11 +245,11 @@ def train(dev, world_size, config, args,
 
             x = data_sample['img']
             c = data_sample['class_idx']
-            r = data_sample['reference']
+            r = data_sample['reference']    
             x, c, r = x.to(dev), c.to(dev), r.to(dev)
             x_gray = transforms.Grayscale()(x)
 
-            real_images = data_sample['gth_img'].to(dev)
+            real_images = r
             gth_preset = data_sample['gth_preset'].to(dev)
             positive_reference = data_sample['positive_reference'].to(dev)
 
@@ -292,8 +292,8 @@ def train(dev, world_size, config, args,
                 loss_encoderT = loss_encoder_t(preset, gth_preset, preset_emb, positive_ref_emb)
                 
 
-            scaler.scale(loss).backward(retain_graph=True)
-            scaler.scale(loss_encoderT).backward()
+            # scaler.scale(loss).backward(retain_graph=True)
+            scaler.scale(loss + loss_encoderT).backward()
             scaler.step(optimizer_g)
             scaler.update()
 
