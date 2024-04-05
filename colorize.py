@@ -27,6 +27,7 @@ def parse():
     parser.add_argument('--path_ckpt', default='/content/ckpts/unknown')
     parser.add_argument('--path_output', default='./results')
     parser.add_argument('--path_imgnet_val', default='/content/sub-train/train/0')
+    parser.add_argument('--path_ref', default='')
 
     parser.add_argument('--use_ema', action='store_true')
     parser.add_argument('--no_upsample', action='store_true')
@@ -56,7 +57,7 @@ def main(args):
     path_eg_ema = join(args.path_ckpt, 'EG_EMA_%03d.ckpt' % args.epoch)
     path_args = join(args.path_ckpt, 'args.pkl')
 
-    path_ref = "/content/ref/n02966193_15570.jpg"
+    path_ref = args.path_ref
 
     if not exists(path_eg):
         raise FileNotFoundError(path_eg)
