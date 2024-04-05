@@ -101,7 +101,7 @@ def parse_args():
     parser.add_argument('--loss_lpips', action='store_true', default=True)
     parser.add_argument('--loss_adv', action='store_true', default=True)
     parser.add_argument('--coef_mse', type=float, default=1.0)
-    parser.add_argument('--coef_lpips', type=float, default=0.5)
+    parser.add_argument('--coef_lpips', type=float, default=0.2)
     parser.add_argument('--coef_adv', type=float, default=0.03)
     parser.add_argument('--vgg_target_layers', type=int, nargs='+',
                             default=[1, 2, 13, 20])
@@ -253,6 +253,12 @@ def train(dev, world_size, config, args,
             gth_preset = data_sample['gth_preset'].to(dev)
             positive_reference = data_sample['positive_reference'].to(dev)
 
+            #swap reference <-> positive_reference
+
+            _tmp = r
+            r = positive_reference
+            positive_reference = _tmp
+
             # Sample z
             z = torch.zeros((args.size_batch, args.dim_z)).to(dev)
             z.normal_(mean=0, std=0.8)
@@ -290,10 +296,12 @@ def train(dev, world_size, config, args,
                                            fake=fake)
                 
                 loss_encoderT = loss_encoder_t(preset, gth_preset, preset_emb, positive_ref_emb)
+
+                g_loss = loss + loss_encoderT
                 
 
             # scaler.scale(loss).backward(retain_graph=True)
-            scaler.scale(loss + loss_encoderT).backward()
+            scaler.scale(g_loss).backward()
             scaler.step(optimizer_g)
             scaler.update()
 
