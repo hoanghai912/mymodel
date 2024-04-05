@@ -101,7 +101,7 @@ def parse_args():
     parser.add_argument('--loss_lpips', action='store_true', default=True)
     parser.add_argument('--loss_adv', action='store_true', default=True)
     parser.add_argument('--coef_mse', type=float, default=1.0)
-    parser.add_argument('--coef_lpips', type=float, default=0.2)
+    parser.add_argument('--coef_lpips', type=float, default=0.5)
     parser.add_argument('--coef_adv', type=float, default=0.03)
     parser.add_argument('--vgg_target_layers', type=int, nargs='+',
                             default=[1, 2, 13, 20])
