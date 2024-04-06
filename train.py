@@ -240,6 +240,7 @@ def train(dev, world_size, config, args,
         tbar = tqdm(dataloader)
         tbar.set_description('epoch: %03d' % epoch)
         loss_generator = loss_dis_train = loss_encoder_t_train = None
+        test_output = None
         for i, data_sample in enumerate(tbar):
             EG.train()
 
@@ -343,6 +344,8 @@ def train(dev, world_size, config, args,
             loss_generator = loss
             loss_dis_train = loss_d
             loss_encoder_t_train = loss_encoderT
+
+            test_output = fake[0].detach().cpu()
             num_iter += 1
         
         print("Loss_g =", loss_generator)
@@ -360,7 +363,7 @@ def train(dev, world_size, config, args,
                           schedule_d=scheduler_d,
                           ema_g=ema_g,
                           num_iter=num_iter,
-                          args=args, epoch=epoch, path_ckpts=path_ckpts)
+                          args=args, epoch=epoch, path_ckpts=path_ckpts, test_output=test_output)
 
         if args.use_schedule:
             scheduler_d.step(epoch)

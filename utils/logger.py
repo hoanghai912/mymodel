@@ -2,15 +2,17 @@ import torch
 from os.path import join
 from .common_utils import lab_fusion, make_grid_multi
 from torch.cuda.amp import autocast
+import matplotlib.pyplot as plt
 
 
 def make_log_ckpt(EG, D,
                   optim_g, optim_d,
                   schedule_g, schedule_d, 
                   ema_g, 
-                  num_iter, args, epoch, path_ckpts):
+                  num_iter, args, epoch, path_ckpts, test_output):
     # Encoder&Generator
-    if epoch < 15:
+    plt.imshow(  test_output.permute(1, 2, 0)  )
+    if epoch < 40:
       return
     name = 'EG_%03d.ckpt' % epoch 
     path = join(path_ckpts, name) 

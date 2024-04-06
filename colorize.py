@@ -26,12 +26,8 @@ def parse():
     parser.add_argument('--path_ckpt_g', default='/kaggle/working/pre_trained/G_ema_256.pth')
     parser.add_argument('--path_ckpt', default='/kaggle/working/ckpts/unknown')
     parser.add_argument('--path_output', default='./results')
-<<<<<<< HEAD
-    parser.add_argument('--path_imgnet_val', default='/kaggle/working/sub-train/train/0')
-=======
     parser.add_argument('--path_imgnet_val', default='/content/sub-train/train/0')
     parser.add_argument('--path_ref', default='')
->>>>>>> main
 
     parser.add_argument('--use_ema', action='store_true')
     parser.add_argument('--no_upsample', action='store_true')
@@ -61,11 +57,7 @@ def main(args):
     path_eg_ema = join(args.path_ckpt, 'EG_EMA_%03d.ckpt' % args.epoch)
     path_args = join(args.path_ckpt, 'args.pkl')
 
-<<<<<<< HEAD
-    path_ref = "/kaggle/working/ref/n02966193_15570.jpg"
-=======
     path_ref = args.path_ref
->>>>>>> main
 
     if not exists(path_eg):
         raise FileNotFoundError(path_eg)
