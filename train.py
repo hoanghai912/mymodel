@@ -345,7 +345,8 @@ def train(dev, world_size, config, args,
             loss_dis_train = loss_d
             loss_encoder_t_train = loss_encoderT
 
-            test_output = fake[0].detach().cpu()
+            test_output = fake[0].add(1).div(2).detach().cpu()
+            test_gt = real_images[0].detach().cpu()
             num_iter += 1
         
         print("Loss_g =", loss_generator)
@@ -363,7 +364,10 @@ def train(dev, world_size, config, args,
                           schedule_d=scheduler_d,
                           ema_g=ema_g,
                           num_iter=num_iter,
-                          args=args, epoch=epoch, path_ckpts=path_ckpts, test_output=test_output)
+                          args=args, epoch=epoch, 
+                          path_ckpts=path_ckpts, 
+                          test_output=test_output,
+                          test_gt=test_gt)
 
         if args.use_schedule:
             scheduler_d.step(epoch)

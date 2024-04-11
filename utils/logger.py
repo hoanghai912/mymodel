@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from os.path import join
 from .common_utils import lab_fusion, make_grid_multi
@@ -9,9 +10,18 @@ def make_log_ckpt(EG, D,
                   optim_g, optim_d,
                   schedule_g, schedule_d, 
                   ema_g, 
-                  num_iter, args, epoch, path_ckpts, test_output):
+                  num_iter, args, epoch, path_ckpts, 
+                  test_output, test_gt):
     # Encoder&Generator
-    plt.imshow(  test_output.permute(1, 2, 0)  )
+    test_output = test_output.squeeze(0).permute(1, 2, 0).numpy()
+    test_gt = test_gt.squeeze(0).permute(1, 2, 0).numpy().astype(np.float16)
+    print(test_output.dtype)
+    print(test_gt.dtype)
+    # test_output = test_output.permute(1, 2, 0)
+    plt.imsave('test_output.png', test_output)
+    plt.imsave('test_gt.png', test_gt)
+
+    
     if epoch < 40:
       return
     name = 'EG_%03d.ckpt' % epoch 
