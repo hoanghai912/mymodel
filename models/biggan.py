@@ -379,6 +379,7 @@ class Generator(nn.Module):
 
             for block in blocklist:
                 h = block(h, ys[index], use_in)
+                print('G_forward_from', h.shape)
 
         # Apply batchnorm-relu-conv-tanh at output
         return torch.tanh(self.output_layer(h))

@@ -321,14 +321,23 @@ class EncoderF_Res(nn.Module):
         self.init_weights()
 
     def forward(self, x, c=None):
+        output_blocks = []
         x = self.res1(x, c)
+        output_blocks.append(x)
         x = self.res2(x, c)
+        output_blocks.append(x)
+
         x = self.res3(x, c)
         if self.use_att:
             x = self.att(x)
+        output_blocks.append(x)
+
         x = self.res4(x, c)
+        output_blocks.append(x)
+
         x = self.res5(x, c)
-        return x
+        output_blocks.append(x)
+        return output_blocks
 
 
     def forward_with_cp(self, x, cp):

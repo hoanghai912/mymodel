@@ -154,13 +154,30 @@ class Colorizer(nn.Module):
         )
 
     def forward(self, x_gray, c, z, ref, pos_ref):
-        f = self.E(x_gray, self.G.shared(c))
+        # f = self.E(x_gray, self.G.shared(c))
+        e_feats = self.E(x_gray, self.G.shared(c))
+
         encoder_t_out, p_vec, p_emb = self.EncoderT(x_gray, ref)
         _, _, positive_ref_emb = self.EncoderT(x_gray, pos_ref)
-        f = torch.cat([f, encoder_t_out[-1]], 1)
+
+        g_feats = []
+        for i, block in enumerate(self.G.blocks):
+            e_feat = e_feats[i]
+            print('e_feat_{}'.format(i), e_feat.shape)
+            e_t_feat = encoder_t_out[i]
+            print('e_t_feat_{}'.format(i), e_t_feat.shape)
+            # g_feat = self.G.forward_from(z, self.G.shared(c), i, torch.cat([e_feat, e_t_feat], 1))
+            # g_feats.append(g_feat)
+            # g_feats.append(torch.cat([e_feat, e_t_feat], 1))
+
+
+        f = torch.cat([e_feats[-1], encoder_t_out[-1]], 1)
         f = self.final_conv(f)
         output = self.G.forward_from(z, self.G.shared(c), 
                 self.id_mid_layer, f)
+        # f = torch.cat([g_feats[-1], encoder_t_out[-1]], 1)
+        # f = self.final_conv(f)
+        # output = self.G.forward_from(z, self.G.shared(c), self.id_mid_layer, f)
 
         return output, p_vec, p_emb, positive_ref_emb
 
