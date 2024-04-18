@@ -161,20 +161,20 @@ class Colorizer(nn.Module):
         _, _, positive_ref_emb = self.EncoderT(x_gray, pos_ref)
 
         g_feats = []
-        for i, block in enumerate(self.G.blocks):
+        for i in range(len(e_feat)):
             e_feat = e_feats[i]
-            print('e_feat_{}'.format(i), e_feat.shape)
-            e_t_feat = encoder_t_out[i]
-            print('e_t_feat_{}'.format(i), e_t_feat.shape)
+            # print('e_feat_{}'.format(i), e_feat.shape)
+            e_t_feat = encoder_t_out[i+1]
+            # print('e_t_feat_{}'.format(i), e_t_feat.shape)
             # g_feat = self.G.forward_from(z, self.G.shared(c), i, torch.cat([e_feat, e_t_feat], 1))
             # g_feats.append(g_feat)
             # g_feats.append(torch.cat([e_feat, e_t_feat], 1))
-
+            g_feats.append(torch.cat([e_feat, e_t_feat], 1))
 
         f = torch.cat([e_feats[-1], encoder_t_out[-1]], 1)
         f = self.final_conv(f)
         output = self.G.forward_from(z, self.G.shared(c), 
-                self.id_mid_layer, f)
+                self.id_mid_layer, f, source_inputs=g_feats)
         # f = torch.cat([g_feats[-1], encoder_t_out[-1]], 1)
         # f = self.final_conv(f)
         # output = self.G.forward_from(z, self.G.shared(c), self.id_mid_layer, f)

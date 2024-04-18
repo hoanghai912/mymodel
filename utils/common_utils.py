@@ -173,7 +173,7 @@ def make_grid_multi(xs, nrow=4):
 def read_preset(db_root_dir, existing_pids_in_mode):
     presets = {}
     # keys_emb = np.load("/data/manho/lc_data/keys.npy")
-    keys_emb = np.load("/kaggle/working/mymodel/keys.npy")
+    keys_emb = np.load("/content/mymodel/keys.npy")
     for pid in existing_pids_in_mode:
         with open(osp.join(db_root_dir, 'norm_presets', pid + '.json'), 'r') as json_file:
             presets[pid] = json.load(json_file)

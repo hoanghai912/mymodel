@@ -221,6 +221,7 @@ class Generator(nn.Module):
             layers.bn(
                 self.arch['out_channels'][-1], cross_replica=self.cross_replica, mybn=self.mybn),
             self.activation, self.which_conv(self.arch['out_channels'][-1], 3))
+        
 
         # Initialize weights. Optionally skip init for testing.
         if not skip_init:
@@ -257,6 +258,7 @@ class Generator(nn.Module):
         # LR scheduling, left here for forward compatibility
         # self.lr_sched = {'itr' : 0}# if self.progressive else {}
         # self.j = 0
+        
 
     # Initialize
     def init_weights(self):
@@ -351,8 +353,12 @@ class Generator(nn.Module):
         print('result:', h.shape)
         # Apply batchnorm-relu-conv-tanh at output
         return torch.tanh(self.output_layer(h))
+    
 
-    def forward_from(self, z, y, num_layer, h, use_in=False):
+    def custom_conv2d_adjust(self, in_channels, out_channels):
+        return nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1)
+
+    def forward_from(self, z, y, num_layer, h, use_in=False, source_inputs=[]):
         if num_layer == 0:
             if len(h.shape) == 1:
                 h = h[None, ...]
@@ -377,8 +383,14 @@ class Generator(nn.Module):
             if index < num_layer:
                 continue
 
-            for block in blocklist:
+            for i, block in enumerate(blocklist):
                 h = block(h, ys[index], use_in)
+                print('h', h.shape)
+                block_concat_adjust = self.custom_conv2d_adjust(source_inputs[-i-2].shape[1], h.shape[1])(source_inputs[-i-1])
+                print('block_concat_adjust', block_concat_adjust.shape)
+                h = h + block_concat_adjust
+                # print('h', h.shape)
+                
                 print('G_forward_from', h.shape)
 
         # Apply batchnorm-relu-conv-tanh at output
