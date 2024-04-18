@@ -215,6 +215,11 @@ class Generator(nn.Module):
         # Turn self.blocks into a ModuleList so that it's all properly registered.
         self.blocks = nn.ModuleList([nn.ModuleList(block) for block in self.blocks])
 
+        self.conv2d_adjust = nn.ModuleList([nn.Conv2d(1024, 768, 1, stride=1),
+                                            nn.Conv2d(512, 384, 1, stride=1),
+                                            nn.Conv2d(256, 192, 1, stride=1),
+                                            nn.Conv2d(128, 96, 1, stride=1)
+                                            ])
         # output layer: batchnorm-relu-conv.
         # Consider using a non-spectral conv here
         self.output_layer = nn.Sequential(
@@ -383,15 +388,15 @@ class Generator(nn.Module):
             if index < num_layer:
                 continue
 
+            h = h + self.conv2d_adjust[-index-1](h)
+            print('h before {}'.format(index), h.shape)
             for i, block in enumerate(blocklist):
                 h = block(h, ys[index], use_in)
-                print('h', h.shape)
-                block_concat_adjust = self.custom_conv2d_adjust(source_inputs[-i-2].shape[1], h.shape[1])(source_inputs[-i-1])
-                print('block_concat_adjust', block_concat_adjust.shape)
-                h = h + block_concat_adjust
-                # print('h', h.shape)
                 
-                print('G_forward_from', h.shape)
+                
+                # print('G_forward_from', h.shape)
+            
+            print('G_forward_from_index {}'.format(index), h.shape)
 
         # Apply batchnorm-relu-conv-tanh at output
         return torch.tanh(self.output_layer(h))
