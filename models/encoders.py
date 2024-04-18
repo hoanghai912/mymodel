@@ -58,7 +58,7 @@ class Netv2(nn.Module):
         pddims = [2048, 1024, args.g_out_channels[0]]
         # sddims = [k*2 for k in _tmp[::-1]]
         # sddims += [sddims[-1]]
-        enc_kernels = [[5,5]] + [[3,3] for k in range(self.depth-1)]
+        enc_kernels = [[5,3]] + [[3,3] for k in range(self.depth-1)]
 
         print("P_Dims: {}\nPD_Dims: {}\nEnc_Kernels: {}".format(pdims, pddims, enc_kernels))
 

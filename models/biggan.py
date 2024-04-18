@@ -388,15 +388,19 @@ class Generator(nn.Module):
             if index < num_layer:
                 continue
 
-            h = h + self.conv2d_adjust[-index-1](h)
-            print('h before {}'.format(index), h.shape)
+            if index > num_layer:
+            #   print(self.conv2d_adjust[index-3])
+            #   print('source_inputs {}'.format(-index+1), source_inputs[-index+1].shape)
+              _tmp = self.conv2d_adjust[index-3](source_inputs[-index+1])
+            #   print('h before {}'.format(index), h.shape)
+              h = h + _tmp
             for i, block in enumerate(blocklist):
                 h = block(h, ys[index], use_in)
                 
                 
                 # print('G_forward_from', h.shape)
             
-            print('G_forward_from_index {}'.format(index), h.shape)
+            # print('G_forward_from_index {}'.format(index), h.shape)
 
         # Apply batchnorm-relu-conv-tanh at output
         return torch.tanh(self.output_layer(h))
