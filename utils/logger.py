@@ -11,15 +11,15 @@ def make_log_ckpt(EG, D,
                   schedule_g, schedule_d, 
                   ema_g, 
                   num_iter, args, epoch, path_ckpts, 
-                  test_output, test_gt):
+                  test_output, test_gt, test_ref):
     # Encoder&Generator
     test_output = test_output.squeeze(0).permute(1, 2, 0).numpy()
     test_gt = test_gt.squeeze(0).permute(1, 2, 0).numpy().astype(np.float16)
-    print(test_output.dtype)
-    print(test_gt.dtype)
+    test_ref = test_ref.squeeze(0).permute(1, 2, 0).numpy().astype(np.float16)
     # test_output = test_output.permute(1, 2, 0)
-    plt.imsave('test_output.png', test_output)
-    plt.imsave('test_gt.png', test_gt)
+    plt.imsave('test_output_{}.png'.format(epoch), test_output)
+    plt.imsave('test_gt_{}.png'.format(epoch), test_gt)
+    plt.imsave('test_ref_{}.png'.format(epoch), test_ref)
 
     
     if epoch < 40:
