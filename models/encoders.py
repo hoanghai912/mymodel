@@ -87,7 +87,8 @@ class Netv2(nn.Module):
 
     def forward(self, X, R):
         sources = [None]
-        pout = torch.cat([X, R], 1)
+        # pout = torch.cat([X, R], 1)
+        pout = X
         # sout = X
 
         ## Encoder

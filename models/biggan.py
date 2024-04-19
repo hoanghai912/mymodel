@@ -387,14 +387,15 @@ class Generator(nn.Module):
             # Second inner loop in case block has multiple layers
             if index < num_layer:
                 continue
-
-            if index > num_layer:
-            #   print(self.conv2d_adjust[index-3])
-            #   print('source_inputs {}'.format(-index+1), source_inputs[-index+1].shape)
-              _tmp = self.conv2d_adjust[index-3](source_inputs[-index+1])
-            #   print('h before {}'.format(index), h.shape)
-              h = h + _tmp
-            for i, block in enumerate(blocklist):
+            
+            if source_inputs:
+                if index > num_layer:
+                #   print(self.conv2d_adjust[index-3])
+                #   print('source_inputs {}'.format(-index+1), source_inputs[-index+1].shape)
+                    _tmp = self.conv2d_adjust[index-3](source_inputs[-index+1])
+                #   print('h before {}'.format(index), h.shape)
+                    h = h + _tmp
+            for block in blocklist:
                 h = block(h, ys[index], use_in)
                 
                 

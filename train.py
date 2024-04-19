@@ -250,7 +250,7 @@ def train(dev, world_size, config, args,
             x, c, r = x.to(dev), c.to(dev), r.to(dev)
             x_gray = transforms.Grayscale()(x)
 
-            real_images = r
+            real_images = data_sample['gth_img'].to(dev)
             gth_preset = data_sample['gth_preset'].to(dev)
             positive_reference = data_sample['positive_reference'].to(dev)
 

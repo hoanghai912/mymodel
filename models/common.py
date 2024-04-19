@@ -126,7 +126,7 @@ class Colorizer(nn.Module):
             args_et = Args()
             args_et.g_depth = 5
             args_et.g_norm = "evo"
-            args_et.g_in_channels = [4,3]
+            args_et.g_in_channels = [3,3]
             args_et.g_out_channels = [69,3]
             args_et.g_downsampler = "down_blurmax"
             args_et.crop_size = [256, 256]
@@ -154,24 +154,24 @@ class Colorizer(nn.Module):
         )
 
     def forward(self, x_gray, c, z, ref, pos_ref):
-        # f = self.E(x_gray, self.G.shared(c))
-        e_feats = self.E(x_gray, self.G.shared(c))
+        f = self.E(x_gray, self.G.shared(c))[-1]
+        # e_feats = self.E(x_gray, self.G.shared(c))
 
         encoder_t_out, p_vec, p_emb = self.EncoderT(x_gray, ref)
         _, _, positive_ref_emb = self.EncoderT(x_gray, pos_ref)
 
-        g_feats = []
-        for i in range(len(e_feats)):
-            e_feat = e_feats[i]
-            # print('e_feat_{}'.format(i), e_feat.shape)
-            e_t_feat = encoder_t_out[i+1]
-            # print('e_t_feat_{}'.format(i), e_t_feat.shape)
-            g_feats.append(torch.cat([e_feat, e_t_feat], 1))
+        # g_feats = []
+        # for i in range(len(e_feats)):
+        #     e_feat = e_feats[i]
+        #     # print('e_feat_{}'.format(i), e_feat.shape)
+        #     e_t_feat = encoder_t_out[i+1]
+        #     # print('e_t_feat_{}'.format(i), e_t_feat.shape)
+        #     g_feats.append(torch.cat([e_feat, e_t_feat], 1))
 
-        f = torch.cat([e_feats[-1], encoder_t_out[-1]], 1)
+        f = torch.cat([f, encoder_t_out[-1]], 1)
         f = self.final_conv(f)
         output = self.G.forward_from(z, self.G.shared(c), 
-                self.id_mid_layer, f, source_inputs=g_feats)
+                self.id_mid_layer, f)
         # f = torch.cat([g_feats[-1], encoder_t_out[-1]], 1)
         # f = self.final_conv(f)
         # output = self.G.forward_from(z, self.G.shared(c), self.id_mid_layer, f)
@@ -179,8 +179,10 @@ class Colorizer(nn.Module):
         return output, p_vec, p_emb, positive_ref_emb
 
     def forward_test(self, x_gray, c, z, ref):
-        f = self.E(x_gray, self.G.shared(c))
+        f = self.E(x_gray, self.G.shared(c))[-1]
+
         encoder_t_out, p_vec, p_emb = self.EncoderT(x_gray, ref)
+
         f = torch.cat([f, encoder_t_out[-1]], 1)
         f = self.final_conv(f)
         output = self.G.forward_from(z, self.G.shared(c), 
