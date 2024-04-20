@@ -250,7 +250,7 @@ def train(dev, world_size, config, args,
             find_unused_parameters=False)
     vgg_per = DDP(vgg_per, device_ids=[dev], 
                   find_unused_parameters=True)
-    EncoderT = DDP(EncoderT, device_ids=[dev],find_unused_parameters=True)
+    EncoderT = DDP(EncoderT, device_ids=[dev],find_unused_parameters=False)
 
     # Datasets
     sampler = DistributedSampler(dataset)
@@ -273,16 +273,17 @@ def train(dev, world_size, config, args,
         test_preset_id = None
         for i, data_sample in enumerate(tbar):
             EG.train()
+            EncoderT.train()
 
-            x = data_sample['img']
+            x = torch.autograd.Variable(data_sample['img'])
             c = data_sample['class_idx']
-            r = data_sample['reference']
+            r = torch.autograd.Variable(data_sample['reference'])
             x, c, r = x.to(dev), c.to(dev), r.to(dev)
             x_gray = transforms.Grayscale()(x)
 
-            real_images = data_sample['gth_img'].to(dev)
-            gth_preset = data_sample['gth_preset'].to(dev)
-            positive_reference = data_sample['positive_reference'].to(dev)
+            real_images = torch.autograd.Variable(data_sample['gth_img'].to(dev))
+            gth_preset = torch.autograd.Variable(data_sample['gth_preset'].to(dev))
+            positive_reference = torch.autograd.Variable(data_sample['positive_reference'].to(dev))
 
             #swap reference <-> positive_reference
 
