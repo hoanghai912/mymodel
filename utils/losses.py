@@ -90,14 +90,10 @@ class DiscriminatorLoss(object):
 
 
 # Preset Loss
-def criterionL1():
-    return nn.L1Loss().cuda()
-
-
 def loss_encoder_t(preset, gth_preset, preset_emb, positive_ref_emb):
     pass
     loss_p = nn.L1Loss()(preset, gth_preset)
     loss_pos = nn.L1Loss()(preset_emb, positive_ref_emb)
 
-    loss = 0.2*loss_p + 1*loss_pos
+    loss = 0.1*loss_p + 1*loss_pos
     return loss

@@ -15,7 +15,7 @@ def get_subsampler(_name, nchannels):
     return {
         "down_max": nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         "down_avg": nn.AvgPool2d(kernel_size=3, stride=2, padding=1),
-        "down_conv": nn.Sequential(nn.Conv2d(nchannels, nchannels, kernel_size=3, stride=2, padding=1, bias=True), nn.ReLU()),
+        "down_conv": nn.Sequential(nn.Conv2d(nchannels, nchannels, kernel_size=3, stride=2, padding=1, bias=True), nn.LeakyReLU(0.1)),
         "down_blurmax": nn.Sequential(nn.MaxPool2d(kernel_size=2, stride=1), get_blurpool("down_2d")(channels=nchannels, filt_size=3, stride=2)),
         "down_bluravg": get_blurpool("down_2d")(channels=nchannels, filt_size=3, stride=2),
         "up_bilinear": nn.Upsample(scale_factor=2, mode='bilinear'),
@@ -31,7 +31,7 @@ class BasicLayer(nn.Module):
     subsampling="none",
     norms=["evo", "evo"],
     # acts=[nn.LeakyReLU(0.1), nn.LeakyReLU(0.1)]):
-    acts=[nn.ReLU(), nn.ReLU()]):
+    acts=[nn.LeakyReLU(0.1), nn.LeakyReLU(0.1)]):
         super(BasicLayer, self).__init__()
         assert len(block_names) == 2
         self.subsampler = get_subsampler(subsampling, in_channels) if subsampling != "none" else None
@@ -71,7 +71,7 @@ def get_block(block_name):
     }[block_name]
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, groups=1, act=nn.ReLU(), norm="none"):
+    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, groups=1, act=nn.LeakyReLU(0.1), norm="none"):
         super(ConvBlock, self).__init__()
         padding = (kernel_size - 1) // 2
         layers = []

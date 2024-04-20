@@ -54,10 +54,7 @@ class Netv2(nn.Module):
         _tmp = [2**(k)*32 for k in range(self.depth-1)]
         _tmp += [_tmp[-1]]
         pdims = [args.g_in_channels[0]] + _tmp
-        # sdims = [args.g_in_channels[1]] + _tmp
         pddims = [2048, 1024, args.g_out_channels[0]]
-        # sddims = [k*2 for k in _tmp[::-1]]
-        # sddims += [sddims[-1]]
         enc_kernels = [[5,3]] + [[3,3] for k in range(self.depth-1)]
 
         print("P_Dims: {}\nPD_Dims: {}\nEnc_Kernels: {}".format(pdims, pddims, enc_kernels))
@@ -75,9 +72,9 @@ class Netv2(nn.Module):
 
         self.pdfc1 = nn.Sequential(
             nn.Linear(self.linear_in, pddims[0]),
-            nn.ReLU(),
+            nn.LeakyReLU(0.1),
             nn.Linear(pddims[0], pddims[1]),
-            nn.ReLU()
+            nn.LeakyReLU(0.1)
         )
 
         self.pdfc2 = nn.Sequential(
@@ -87,43 +84,18 @@ class Netv2(nn.Module):
 
     def forward(self, X, R):
         sources = [None]
-        # pout = torch.cat([X, R], 1)
-        pout = X
-        # sout = X
+        pout = torch.cat([X, R], 1)
 
         ## Encoder
         for i in range(self.depth):
             pout = getattr(self, 'pconv_{:d}'.format(i + 1))(pout)
-            # sout = getattr(self, 'sconv_{:d}'.format(i + 1))(sout)
-            # sources.append(torch.cat([pout, sout], 1))
             sources.append(pout)
         ## Linear Decoder
         p_emb = self.pdfc1(pout.view(-1, self.linear_in))
 
         p_vec = self.pdfc2(p_emb)
 
-        ## Decoder
-        # sdout = sources.pop()
-
-        # for i in range(self.depth):
-        #     # print(X.size())
-
-        #     sdout = getattr(self, 'sdconv_{:d}'.format(i + 1))(sdout, _skip_feat=sources[-i-1] if i < self.depth-1 else None)
-
-        # return self.final_conv(sdout), p_vec, p_emb
         return sources, p_vec, p_emb
-    
-    def estimate_preset(self, _input):
-        pout = _input
-
-        ## Encoder
-        for i in range(self.depth):
-            pout = getattr(self, 'pconv_{:d}'.format(i + 1))(pout)
-
-        ## Linear Decoder
-        p_emb = self.pdfc1(pout.view(-1, self.linear_in))
-        p_vec = self.pdfc2(p_emb)
-        return None, p_vec, p_emb
 
 class ResConvBlock(nn.Module):
     def __init__(self, 
@@ -322,23 +294,14 @@ class EncoderF_Res(nn.Module):
         self.init_weights()
 
     def forward(self, x, c=None):
-        output_blocks = []
         x = self.res1(x, c)
-        output_blocks.append(x)
         x = self.res2(x, c)
-        output_blocks.append(x)
-
         x = self.res3(x, c)
         if self.use_att:
             x = self.att(x)
-        output_blocks.append(x)
-
         x = self.res4(x, c)
-        output_blocks.append(x)
-
         x = self.res5(x, c)
-        output_blocks.append(x)
-        return output_blocks
+        return x
 
 
     def forward_with_cp(self, x, cp):
