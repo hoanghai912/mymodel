@@ -4,22 +4,27 @@ from os.path import join
 from .common_utils import lab_fusion, make_grid_multi
 from torch.cuda.amp import autocast
 import matplotlib.pyplot as plt
-
+from utils.common_utils import set_seed, rgb2lab, lab2rgb
+from torchvision.transforms import ToPILImage
 
 def make_log_ckpt(EG, D,
                   optim_g, optim_d,
                   schedule_g, schedule_d, 
                   ema_g, 
-                  num_iter, args, epoch, path_ckpts, 
+                  num_iter, args, epoch, path_ckpts, x_gray,
                   test_output, test_gt, test_ref, test_preset_id):
     # Encoder&Generator
-    test_output = test_output.squeeze(0).permute(1, 2, 0).numpy()
+    lab_fusion = fusion(x_gray, test_output)
+    print(lab_fusion.shape)
+    im = ToPILImage()(lab_fusion)
+    # test_output = test_output.squeeze(0).permute(1, 2, 0).numpy()
     test_gt = test_gt.squeeze(0).permute(1, 2, 0).numpy().astype(np.float16)
     test_ref = test_ref.squeeze(0).permute(1, 2, 0).numpy().astype(np.float16)
     # test_output = test_output.permute(1, 2, 0)
-    plt.imsave('test_output_e{}_p{}.png'.format(epoch, test_preset_id), test_output)
+    # plt.imsave('test_output_e{}_p{}.png'.format(epoch, test_preset_id), test_output)
+    im.save('test_output_e{}_p{}.png'.format(epoch, test_preset_id))
     plt.imsave('test_gt_e{}_p{}.png'.format(epoch, test_preset_id), test_gt)
-    # plt.imsave('test_ref_{}.png'.format(epoch), test_ref)
+    plt.imsave('test_ref_{}.png'.format(epoch), test_ref)
 
     
     if epoch < 40:
@@ -47,6 +52,12 @@ def make_log_ckpt(EG, D,
                 'schedule_d': schedule_d.state_dict(),
                 'num_iter': num_iter}, path)
 
+def fusion(img_gray, img_rgb):
+    img_gray *= 100
+    ab = rgb2lab(img_rgb)[..., 1:, :, :]
+    lab = torch.cat([img_gray, ab], dim=0)
+    rgb = lab2rgb(lab)
+    return rgb
 
 def load_for_retrain(EG, D,
                      optim_g, optim_d, schedule_g, schedule_d, 

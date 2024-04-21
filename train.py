@@ -339,8 +339,9 @@ def train(dev, world_size, config, args,
 
             test_output = fake[0].add(1).div(2).detach().cpu()
             test_gt = real_images[0].detach().cpu()
-            test_ref = r[0].detach().cpu()
+            test_ref = positive_reference[0].detach().cpu()
             test_preset_id = data_sample['pairs'][-1][0]
+            test_x_gray = x_gray[0].detach().cpu()
             num_iter += 1
         
         print("Loss_g =", loss_generator)
@@ -363,7 +364,8 @@ def train(dev, world_size, config, args,
                           test_output=test_output,
                           test_gt=test_gt,
                           test_ref=test_ref,
-                          test_preset_id=test_preset_id)
+                          test_preset_id=test_preset_id,
+                          x_gray=test_x_gray)
 
         if args.use_schedule:
             scheduler_d.step(epoch)
