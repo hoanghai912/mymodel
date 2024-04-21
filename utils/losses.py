@@ -95,5 +95,5 @@ def loss_encoder_t(preset, gth_preset, preset_emb, positive_ref_emb):
     loss_p = nn.L1Loss()(preset, gth_preset)
     loss_pos = nn.L1Loss()(preset_emb, positive_ref_emb)
 
-    loss = 0.1*loss_p + 1*loss_pos
+    loss = 0.02*loss_p + 1*loss_pos
     return loss

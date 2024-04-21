@@ -83,19 +83,19 @@ class Netv2(nn.Module):
         )
 
     def forward(self, X, R):
-        sources = [None]
+        # sources = [None]
         pout = torch.cat([X, R], 1)
 
         ## Encoder
         for i in range(self.depth):
             pout = getattr(self, 'pconv_{:d}'.format(i + 1))(pout)
-            sources.append(pout)
+            # sources.append(pout)
         ## Linear Decoder
         p_emb = self.pdfc1(pout.view(-1, self.linear_in))
 
         p_vec = self.pdfc2(p_emb)
 
-        return sources, p_vec, p_emb
+        return pout, p_vec, p_emb
 
 class ResConvBlock(nn.Module):
     def __init__(self, 
