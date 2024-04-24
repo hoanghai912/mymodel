@@ -152,13 +152,11 @@ class Colorizer(nn.Module):
                 p.requires_grad = False
 
 
-    def forward(self, x_gray, c, z, r, positive_ref):
+    def forward(self, x_gray, c, z, embeded_encoder=None):
         f = self.E(x_gray, self.G.shared(c))
         output = self.G.forward_from(z, self.G.shared(c), 
-                self.id_mid_layer, f)
-        _, p_vec, p_emb = self.ET(output, r)
-        _, _, p_emb_ref = self.ET(positive_ref, r)
-        return output, p_vec, p_emb, p_emb_ref
+                self.id_mid_layer, f + embeded_encoder)
+        return output
     
     def fusion(img_gray, img_rgb):
         img_gray *= 100

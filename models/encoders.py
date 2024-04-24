@@ -329,6 +329,124 @@ class EncoderF_Res(nn.Module):
                     pass
                     # print('Init style not recognized...')
 
+class EncoderF_Res_Preset(nn.Module):
+
+    def __init__(self,
+                 ch_in=3,
+                 ch_out=768,
+                 ch_unit=96,
+                 norm='batch',
+                 activation='relu',
+                 init='ortho',
+                 use_att=False,
+                 use_res=True):
+        super().__init__()
+
+        self.init = init
+        self.use_att = use_att
+
+        kwargs = {}
+        if activation == 'lrelu':
+            kwargs['l_slope'] = 0.2
+
+        if use_att:
+            print('Adding attention layer in E at resolution %d' % (64))
+            conv4att = functools.partial(
+                SNConv2d,
+                kernel_size=3,
+                padding=1,
+                num_svs=1,
+                num_itrs=1,
+                eps=1e-06)
+            self.att = Attention(384, conv4att)
+
+        preset_dims = [2048, 1024, 69]
+
+        img_size = 16
+        self.linear_in = img_size*img_size*ch_out
+
+        self.pdfc1 = nn.Sequential(
+            nn.Linear(self.linear_in, preset_dims[0]),
+            nn.LeakyReLU(0.1),
+            nn.Linear(preset_dims[0], preset_dims[1]),
+            nn.LeakyReLU(0.1)
+        )
+
+        self.pdfc2 = nn.Sequential(
+            nn.Linear(preset_dims[1], preset_dims[2]),
+            nn.Tanh()
+        )
+
+        # output is 96 x 256 x 256
+        self.res1 = ResConvBlock(ch_in, ch_unit * 1,
+                                 is_down=False, 
+                                 activation=activation,
+                                 norm=norm,
+                                 use_res=use_res,
+                                 **kwargs)
+        # output is 192 x 128 x 128 
+        self.res2 = ResConvBlock(ch_unit * 1, ch_unit * 2,
+                                 is_down=True, 
+                                 activation=activation,
+                                 norm=norm,
+                                 use_res=use_res,
+                                 **kwargs)
+        # output is  384 x 64 x 64 
+        self.res3 = ResConvBlock(ch_unit * 2, ch_unit * 4,
+                                 is_down=True, 
+                                 activation=activation,
+                                 norm=norm,
+                                 use_res=use_res,
+                                 **kwargs)
+        # output is  768 x 32 x 32 
+        self.res4 = ResConvBlock(ch_unit * 4, ch_unit * 8,
+                                 is_down=True, 
+                                 activation=activation,
+                                 norm=norm,
+                                 use_res=use_res,
+                                 **kwargs)
+        # output is  768 x 16 x 16 
+        self.res5 = ResConvBlock(ch_unit * 8, ch_unit * 8,
+                                 is_down=True, 
+                                 activation=activation,
+                                 norm=norm, 
+                                 use_res=use_res,
+                                 dropout=None,
+                                 **kwargs)
+
+        
+
+        self.init_weights()
+
+    def forward(self, x, c=None):
+        c = nn.Embedding(5, 128)(c)
+        x = self.res1(x, c)
+        x = self.res2(x, c)
+        x = self.res3(x, c)
+        if self.use_att:
+            x = self.att(x)
+        x = self.res4(x, c)
+        x = self.res5(x, c)
+
+        preset_emb = self.pdfc1(x.view(-1, self.linear_in))
+        preset_vec = self.pdfc2(preset_emb) 
+        return x, preset_emb, preset_vec
+
+
+    def init_weights(self):
+        for module in self.modules():
+            if (isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)
+                    or isinstance(module, nn.Embedding)):
+                if self.init == 'ortho':
+                    init.orthogonal_(module.weight)
+                elif self.init == 'N02':
+                    init.normal_(module.weight, 0, 0.02)
+                elif self.init in ['glorot', 'xavier']:
+                    init.xavier_uniform_(module.weight)
+                else:
+                    pass
+                    # print('Init style not recognized...')
+
 
 # z: ([batch, 17])
 # h: ([batch, 24576])
