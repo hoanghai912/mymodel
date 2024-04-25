@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
-from .encoders import (EncoderF_Res, Netv2)
+from .encoders import (EncoderF_Res)
 from .biggan import Generator
 from utils.common_utils import set_seed, rgb2lab, lab2rgb
 
@@ -118,25 +118,6 @@ class Colorizer(nn.Module):
 
             self.id_mid_layer = 2  
 
-            class Args:
-                def __init__(self) -> None:
-                    pass
-                    g_depth = None
-                    g_norm = None
-                    g_in_channels = None
-                    g_out_channels = None
-                    g_downsampler = None
-                    crop_size = None
-
-            args_et = Args()
-            args_et.g_depth = 5
-            args_et.g_norm = "evo"
-            args_et.g_in_channels = [6,3]
-            args_et.g_out_channels = [69,3]
-            args_et.g_downsampler = "down_blurmax"
-            args_et.crop_size = [256, 256]
-
-            self.ET = Netv2(args_et)
 
         else:
             raise Exception('In valid dim_f')
@@ -152,18 +133,12 @@ class Colorizer(nn.Module):
                 p.requires_grad = False
 
 
-    def forward(self, x_gray, c, z, embeded_encoder=None):
+    def forward(self, x_gray, c, z, embeded_encoder):
         f = self.E(x_gray, self.G.shared(c))
+        f = f + embeded_encoder.clone()
         output = self.G.forward_from(z, self.G.shared(c), 
-                self.id_mid_layer, f + embeded_encoder)
+                self.id_mid_layer, f)
         return output
-    
-    def fusion(img_gray, img_rgb):
-        img_gray *= 100
-        ab = rgb2lab(img_rgb)[..., 1:, :, :]
-        lab = torch.cat([img_gray, ab], dim=0)
-        rgb = lab2rgb(lab)
-        return rgb 
 
     def forward_test(self, x_gray, c, z, ref):
         f = self.E(x_gray, self.G.shared(c))[-1]

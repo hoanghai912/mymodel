@@ -40,63 +40,6 @@ class ClassConditionNorm(nn.Module):
 
         return out * gain + bias
 
-# For Encoder T
-class Netv2(nn.Module):
-    def __init__(self, args):
-        super(Netv2, self).__init__()
-
-
-        print('Init Net')
-        self.depth = args.g_depth
-        norms = [args.g_norm, args.g_norm]
-
-        ## Declare params
-        _tmp = [2**(k)*32 for k in range(self.depth-1)]
-        _tmp += [_tmp[-1]]
-        pdims = [args.g_in_channels[0]] + _tmp
-        pddims = [2048, 1024, args.g_out_channels[0]]
-        enc_kernels = [[5,3]] + [[3,3] for k in range(self.depth-1)]
-
-        print("P_Dims: {}\nPD_Dims: {}\nEnc_Kernels: {}".format(pdims, pddims, enc_kernels))
-
-        ## Encoder
-		
-		
-		### Encoder T
-        for i in range(self.depth):
-            setattr(self, 'pconv_{}'.format(i+1), get_layer('basic')(pdims[i],pdims[i+1],kernels=enc_kernels[i], subsampling=args.g_downsampler if i > 0 else 'none', norms=norms))
-
-        ## Linear Decoder
-        img_size = args.crop_size[0]//2**(self.depth-1)
-        self.linear_in = img_size*img_size*pdims[-1]
-
-        self.pdfc1 = nn.Sequential(
-            nn.Linear(self.linear_in, pddims[0]),
-            nn.LeakyReLU(0.1),
-            nn.Linear(pddims[0], pddims[1]),
-            nn.LeakyReLU(0.1)
-        )
-
-        self.pdfc2 = nn.Sequential(
-            nn.Linear(pddims[1], pddims[2]),
-            nn.Tanh()
-        )
-
-    def forward(self, X, R):
-        # sources = [None]
-        pout = torch.cat([X, R], 1)
-
-        ## Encoder
-        for i in range(self.depth):
-            pout = getattr(self, 'pconv_{:d}'.format(i + 1))(pout)
-            # sources.append(pout)
-        ## Linear Decoder
-        p_emb = self.pdfc1(pout.view(-1, self.linear_in))
-
-        p_vec = self.pdfc2(p_emb)
-
-        return pout, p_vec, p_emb
-
 class ResConvBlock(nn.Module):
     def __init__(self, 
             ch_in, 
@@ -360,22 +303,7 @@ class EncoderF_Res_Preset(nn.Module):
                 eps=1e-06)
             self.att = Attention(384, conv4att)
 
-        preset_dims = [2048, 1024, 69]
-
-        img_size = 16
-        self.linear_in = img_size*img_size*ch_out
-
-        self.pdfc1 = nn.Sequential(
-            nn.Linear(self.linear_in, preset_dims[0]),
-            nn.LeakyReLU(0.1),
-            nn.Linear(preset_dims[0], preset_dims[1]),
-            nn.LeakyReLU(0.1)
-        )
-
-        self.pdfc2 = nn.Sequential(
-            nn.Linear(preset_dims[1], preset_dims[2]),
-            nn.Tanh()
-        )
+        
 
         # output is 96 x 256 x 256
         self.res1 = ResConvBlock(ch_in, ch_unit * 1,
@@ -418,8 +346,27 @@ class EncoderF_Res_Preset(nn.Module):
 
         self.init_weights()
 
+        self.embed_layer = (nn.Embedding(400, 128))
+
+        preset_dims = [2048, 1024, 69]
+
+        img_size = 16
+        self.linear_in = img_size*img_size*ch_out
+
+        self.pdfc1 = nn.Sequential(
+            nn.Linear(self.linear_in, preset_dims[0]),
+            nn.LeakyReLU(0.1),
+            nn.Linear(preset_dims[0], preset_dims[1]),
+            nn.LeakyReLU(0.1)
+        )
+
+        self.pdfc2 = nn.Sequential(
+            nn.Linear(preset_dims[1], preset_dims[2]),
+            nn.Tanh()
+        )
+
     def forward(self, x, c=None):
-        c = nn.Embedding(5, 128)(c)
+        c = self.embed_layer(c)
         x = self.res1(x, c)
         x = self.res2(x, c)
         x = self.res3(x, c)

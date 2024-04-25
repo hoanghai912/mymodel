@@ -1,7 +1,7 @@
 import os
 from os.path import join, exists
 import models
-from models import Colorizer, VGG16Perceptual, Netv2
+from models import Colorizer, VGG16Perceptual
 
 from torch.utils.tensorboard import SummaryWriter
 import torch
@@ -238,7 +238,7 @@ def train(dev, world_size, config, args,
     D = DDP(D, device_ids=[dev], 
             find_unused_parameters=False)
     E_P = DDP(E_P, device_ids=[dev], 
-            find_unused_parameters=True)
+            find_unused_parameters=False)
     vgg_per = DDP(vgg_per, device_ids=[dev], 
                   find_unused_parameters=True)
 
@@ -274,6 +274,8 @@ def train(dev, world_size, config, args,
             real_images = data_sample['gth_img'].to(dev)
             gth_preset = data_sample['gth_preset'].to(dev)
             preset_id = data_sample['pairs'][-1]
+            preset_id = [eval(x) for x in preset_id]
+            preset_id = torch.LongTensor(preset_id).to(dev)
             positive_reference = data_sample['positive_reference'].to(dev)
 
             #swap reference <-> positive_reference
@@ -290,7 +292,7 @@ def train(dev, world_size, config, args,
             with autocast():
                 e_t_out, preset_emb, preset_vec = E_P(positive_reference, preset_id)
                 _, positive_emb, _ = E_P(r, preset_id)
-                fake = EG(x_gray, c, z, embeded_encoder=e_t_out)
+                fake = EG(x_gray, c, z, e_t_out)
                 
 
             # DISCRIMINATOR 
@@ -319,17 +321,19 @@ def train(dev, world_size, config, args,
                                            args=args,
                                            fake=fake)
                 
-                g_loss = loss
                 
 
             # scaler.scale(loss).backward(retain_graph=True)
-            scaler.scale(g_loss).backward()
+            scaler.scale(loss).backward()
             scaler.step(optimizer_g)
             scaler.update()
 
             optimizer_ep.zero_grad()
             with autocast():
-                loss_encoderT = loss_encoder_t(preset_vec, gth_preset, preset_emb, positive_emb)
+                loss_encoderT = loss_encoder_t(preset=preset_vec, 
+                                               gth_preset=gth_preset, 
+                                               preset_emb=preset_emb, 
+                                               positive_ref_emb=positive_emb)
 
             scaler.scale(loss_encoderT).backward()
             scaler.step(optimizer_ep)
@@ -341,26 +345,6 @@ def train(dev, world_size, config, args,
                 ema_g.update()
 
             loss_dic['loss_d'] = loss_d
-
-            # Logger
-            # if num_iter % args.interval_save_loss == 0 and is_main_dev:
-            #     make_log_scalar(writer, num_iter, loss_dic)
-
-            # if num_iter % args.interval_save_train == 0 and is_main_dev:
-            #     make_log_img(EG, args.dim_z, writer, args, sample_train,
-            #             dev, num_iter, 'train')
-
-            # if num_iter % args.interval_save_test == 0 and is_main_dev:
-            #     make_log_img(EG, args.dim_z, writer, args, sample_valid,
-            #             dev, num_iter, 'valid')
-
-            # if num_iter % args.interval_save_train == 0 and is_main_dev:
-            #     make_log_img(EG, args.dim_z, writer, args, sample_train,
-            #             dev, num_iter, 'train_ema', ema=ema_g)
-
-            # if num_iter % args.interval_save_test == 0 and is_main_dev:
-            #     make_log_img(EG, args.dim_z, writer, args, sample_valid,
-            #             dev, num_iter, 'valid_ema', ema=ema_g)
             
             loss_generator = loss
             loss_dis_train = loss_d
@@ -376,7 +360,7 @@ def train(dev, world_size, config, args,
         print("Loss_g =", loss_generator)
         print("Loss_discriminator =", loss_dis_train)
         print("Loss_encoder_t =", loss_encoder_t_train)
-        print("Loss EG =", loss_generator + loss_encoder_t_train)
+        # print("Loss EG =", loss_generator + loss_encoder_t_train)
 
         # Save Model
         if is_main_dev:
@@ -397,8 +381,9 @@ def train(dev, world_size, config, args,
                           x_gray=test_x_gray)
 
         if args.use_schedule:
-            scheduler_d.step(epoch)
-            scheduler_g.step(epoch)
+            scheduler_d.step()
+            scheduler_g.step()
+            scheduler_ep.step()
 
 
 def main():
