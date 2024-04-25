@@ -272,127 +272,65 @@ class EncoderF_Res(nn.Module):
                     pass
                     # print('Init style not recognized...')
 
-class EncoderF_Res_Preset(nn.Module):
+class Netv2(nn.Module):
+    def __init__(self, args):
+        super(Netv2, self).__init__()
 
-    def __init__(self,
-                 ch_in=3,
-                 ch_out=768,
-                 ch_unit=96,
-                 norm='batch',
-                 activation='relu',
-                 init='ortho',
-                 use_att=False,
-                 use_res=True):
-        super().__init__()
 
-        self.init = init
-        self.use_att = use_att
+        print('Init Net')
+        self.depth = args.g_depth
+        norms = [args.g_norm, args.g_norm]
 
-        kwargs = {}
-        if activation == 'lrelu':
-            kwargs['l_slope'] = 0.2
+        ## Declare params
+        _tmp = [2**(k)*32 for k in range(self.depth-1)]
+        _tmp += [_tmp[-1]]
+        pdims = [args.g_in_channels[0]] + _tmp
+        pddims = [4096, 2048, 1024, args.g_out_channels[0]]
+        enc_kernels = [[5,3]] + [[3,3] for k in range(self.depth-1)]
 
-        if use_att:
-            print('Adding attention layer in E at resolution %d' % (64))
-            conv4att = functools.partial(
-                SNConv2d,
-                kernel_size=3,
-                padding=1,
-                num_svs=1,
-                num_itrs=1,
-                eps=1e-06)
-            self.att = Attention(384, conv4att)
+        print("P_Dims: {}\nPD_Dims: {}\nEnc_Kernels: {}".format(pdims, pddims, enc_kernels))
 
-        
+        ## Encoder
+        for i in range(self.depth):
+            setattr(self, 'pconv_{}'.format(i+1), get_layer('basic')(pdims[i],pdims[i+1],kernels=enc_kernels[i], subsampling=args.g_downsampler if i > 0 else 'none', norms=norms))
 
-        # output is 96 x 256 x 256
-        self.res1 = ResConvBlock(ch_in, ch_unit * 1,
-                                 is_down=False, 
-                                 activation=activation,
-                                 norm=norm,
-                                 use_res=use_res,
-                                 **kwargs)
-        # output is 192 x 128 x 128 
-        self.res2 = ResConvBlock(ch_unit * 1, ch_unit * 2,
-                                 is_down=True, 
-                                 activation=activation,
-                                 norm=norm,
-                                 use_res=use_res,
-                                 **kwargs)
-        # output is  384 x 64 x 64 
-        self.res3 = ResConvBlock(ch_unit * 2, ch_unit * 4,
-                                 is_down=True, 
-                                 activation=activation,
-                                 norm=norm,
-                                 use_res=use_res,
-                                 **kwargs)
-        # output is  768 x 32 x 32 
-        self.res4 = ResConvBlock(ch_unit * 4, ch_unit * 8,
-                                 is_down=True, 
-                                 activation=activation,
-                                 norm=norm,
-                                 use_res=use_res,
-                                 **kwargs)
-        # output is  768 x 16 x 16 
-        self.res5 = ResConvBlock(ch_unit * 8, ch_unit * 8,
-                                 is_down=True, 
-                                 activation=activation,
-                                 norm=norm, 
-                                 use_res=use_res,
-                                 dropout=None,
-                                 **kwargs)
+        self.final_adjust_conv = nn.Sequential(
+            get_layer('basic')(pdims[-1],512,kernels=[1,1], subsampling='none', norms=norms),
+            get_layer('basic')(512, 768, kernels=[1,1], subsampling='none', norms=norms)
+        )
 
-        
-
-        self.init_weights()
-
-        self.embed_layer = (nn.Embedding(400, 128))
-
-        preset_dims = [2048, 1024, 69]
-
-        img_size = 16
-        self.linear_in = img_size*img_size*ch_out
+        ## Linear Decoder
+        img_size = args.crop_size[0]//2**(self.depth-1)
+        self.linear_in = img_size*img_size*768
 
         self.pdfc1 = nn.Sequential(
-            nn.Linear(self.linear_in, preset_dims[0]),
+            nn.Linear(self.linear_in, pddims[0]),
             nn.LeakyReLU(0.1),
-            nn.Linear(preset_dims[0], preset_dims[1]),
+            nn.Linear(pddims[0], pddims[1]),
+            nn.LeakyReLU(0.1),
+            nn.Linear(pddims[1], pddims[2]),
             nn.LeakyReLU(0.1)
         )
 
         self.pdfc2 = nn.Sequential(
-            nn.Linear(preset_dims[1], preset_dims[2]),
+            nn.Linear(pddims[2], pddims[3]),
             nn.Tanh()
         )
 
-    def forward(self, x, c=None):
-        c = self.embed_layer(c)
-        x = self.res1(x, c)
-        x = self.res2(x, c)
-        x = self.res3(x, c)
-        if self.use_att:
-            x = self.att(x)
-        x = self.res4(x, c)
-        x = self.res5(x, c)
+    def forward(self, X, R=None):
+        # pout = torch.cat([X, R], 1)
+        pout = X
 
-        preset_emb = self.pdfc1(x.view(-1, self.linear_in))
-        preset_vec = self.pdfc2(preset_emb) 
-        return x, preset_emb, preset_vec
+        ## Encoder
+        for i in range(self.depth):
+            pout = getattr(self, 'pconv_{:d}'.format(i + 1))(pout)
 
+        ## Linear Decoder
+        p_emb = self.pdfc1(pout.view(-1, self.linear_in))
 
-    def init_weights(self):
-        for module in self.modules():
-            if (isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)
-                    or isinstance(module, nn.Embedding)):
-                if self.init == 'ortho':
-                    init.orthogonal_(module.weight)
-                elif self.init == 'N02':
-                    init.normal_(module.weight, 0, 0.02)
-                elif self.init in ['glorot', 'xavier']:
-                    init.xavier_uniform_(module.weight)
-                else:
-                    pass
-                    # print('Init style not recognized...')
+        p_vec = self.pdfc2(p_emb)
+
+        return pout, p_vec, p_emb
 
 
 # z: ([batch, 17])

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
-from .encoders import (EncoderF_Res, EncoderF_Res_Preset)
+from .encoders import (EncoderF_Res, Netv2)
 from .biggan import Generator
 from utils.common_utils import set_seed, rgb2lab, lab2rgb
 
@@ -115,14 +115,27 @@ class Colorizer(nn.Module):
                                   init=init_e,
                                   use_res=use_res,
                                   use_att=use_attention)
-            
-            self.ET = EncoderF_Res_Preset(norm=norm_type,
-                                        activation=activation,
-                                        init=init_e,
-                                        use_res=use_res,
-                                        use_att=use_attention)
 
             self.id_mid_layer = 2
+
+            class Args:
+                def __init__(self) -> None:
+                    pass
+                g_depth = None
+                g_norm = None
+                g_in_channels = None
+                g_out_channels = None
+                g_downsampler = None
+                crop_size = None
+            args_et = Args()
+            args_et.g_depth = 5
+            args_et.g_norm = "evo"
+            args_et.g_in_channels = [3,3]
+            args_et.g_out_channels = [69,3]
+            args_et.g_downsampler = "down_blurmax"
+            args_et.crop_size = [256, 256]
+
+            self.EncoderT = Netv2(args=args_et)
 
 
         else:
@@ -139,10 +152,10 @@ class Colorizer(nn.Module):
                 p.requires_grad = False
 
 
-    def forward(self, x_gray, c, z, r, positive_reference, preset_id):
+    def forward(self, x_gray, c, z, r, positive_reference):
         f = self.E(x_gray, self.G.shared(c))
-        e_t_out, preset_emb, preset_vec = self.ET(r, preset_id)
-        _, positive_emb, _ = self.ET(positive_reference, preset_id)
+        e_t_out, preset_vec, preset_emb = self.EncoderT(r)
+        _, _, positive_emb = self.EncoderT(positive_reference)
         f = f + e_t_out
         output = self.G.forward_from(z, self.G.shared(c), 
                 self.id_mid_layer, f)

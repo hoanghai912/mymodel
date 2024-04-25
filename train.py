@@ -256,9 +256,6 @@ def train(dev, world_size, config, args,
 
             real_images = data_sample['gth_img'].to(dev)
             gth_preset = data_sample['gth_preset'].to(dev)
-            preset_id = data_sample['pairs'][-1]
-            preset_id = [eval(x) for x in preset_id]
-            preset_id = torch.LongTensor(preset_id).to(dev)
             positive_reference = data_sample['positive_reference'].to(dev)
 
             #swap reference <-> positive_reference
@@ -275,8 +272,7 @@ def train(dev, world_size, config, args,
             with autocast():
                 fake, preset_vec, preset_emb, positive_emb = EG(x_gray, c, z, 
                                                                 r=positive_reference, 
-                                                                positive_reference=r, 
-                                                                preset_id=preset_id)
+                                                                positive_reference=r)
                 
 
             # DISCRIMINATOR 
@@ -405,25 +401,7 @@ def main():
 
     # Logger
     path_log = join(args.path_log, args.task_name)
-    # writer = SummaryWriter(path_log)
-    # writer.add_text('config', str(args))
-    # print('logger name:', path_log)
 
-    # DATASETS
-    # prep = transforms.Compose([
-    #         ToTensor(),
-    #         transforms.Resize(256),
-    #         transforms.CenterCrop(256),
-    #         ])
-
-    # import custom_transform as tr
-    # composed_transforms = transforms.Compose([
-    #     tr.RandomCrop(cropsize=(256,256)),
-    #     # tr.RandomHorizontalFlip(),
-    #     # tr.RandomVerticalFlip(),
-    #     # tr.RandomRotation(degrees=[0,90,180,270], size=args.crop_size),
-    #     tr.ToTensor()
-    #     ])
 
     composed_transforms = transforms.Compose([
             transforms.ToTensor(),
@@ -434,31 +412,12 @@ def main():
 
     dataset = PhotoSet(args.path_imgnet_train, transform=composed_transforms)
 
-    # dataset, dataset_val = prepare_dataset(
-    #         args.path_imgnet_train,
-    #         args.path_imgnet_val,
-    #         args.index_target,
-    #         prep=prep)
-
 
     is_shuffle = True 
     args.size_batch = int(args.size_batch / num_gpu)
-    # sample_train = extract_sample(dataset, args.size_batch, 
-    #                               args.iter_sample, is_shuffle,
-    #                               pin_memory=False)
-    # sample_valid = extract_sample(dataset_val, args.size_batch, 
-    #                               args.iter_sample, is_shuffle,
-    #                               pin_memory=False)
+
     sample_train = None
     sample_valid = None
-
-    # Logger
-    # grid_init = make_grid_multi(sample_train['xs'], nrow=4)
-    # writer.add_image('GT_train', grid_init)
-    # grid_init = make_grid_multi(sample_valid['xs'], nrow=4)
-    # writer.add_image('GT_valid', grid_init)
-    # writer.flush()
-    # writer.close()
 
     mp.spawn(train,
              args=(num_gpu, config, args, dataset, sample_train, 

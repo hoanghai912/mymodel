@@ -52,8 +52,8 @@ class ResLayer(nn.Module):
     def __init__(self, in_channels, out_channels, block_names=["ConvBlock", "ConvBlock"]):
         super(ResLayer, self).__init__()
         assert len(block_names) == 2
-        self.block1 = get_block(block_names[0])(in_channels, out_channels, act=nn.ReLU())
-        self.block2 = get_block(block_names[1])(out_channels, out_channels, act=nn.ReLU())
+        self.block1 = get_block(block_names[0])(in_channels, out_channels, act=nn.LeakyReLU(0.1))
+        self.block2 = get_block(block_names[1])(out_channels, out_channels, act=nn.LeakyReLU(0.1))
 
     def forward(self, X, _skip_feat=None):
         if _skip_feat is not None:
