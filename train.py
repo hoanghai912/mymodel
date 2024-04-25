@@ -32,7 +32,6 @@ import utils
 from torch_ema import ExponentialMovingAverage
 from functools import partial
 
-from models.encoders import EncoderF_Res_Preset
 
 
 def parse_args():
@@ -164,13 +163,6 @@ def train(dev, world_size, config, args,
     D = models.Discriminator(**config)
     D.train()
 
-    E_P = EncoderF_Res_Preset(norm=args.norm_type,
-                              activation=args.activation,
-                              init=args.weight_init,
-                              use_res=(not args.no_res),
-                              use_att=args.use_attention)
-    E_P.train()
-
 
     if not args.no_pretrained_d:
         D.load_state_dict(torch.load(args.path_ckpt_d, map_location='cpu'),
@@ -181,8 +173,6 @@ def train(dev, world_size, config, args,
             lr=args.lr, betas=(args.b1, args.b2))
     optimizer_d = optim.Adam(D.parameters(),
             lr=args.lr_d, betas=(args.b1_d, args.b2_d))
-    optimizer_ep = optim.Adam(E_P.parameters(),
-            lr=args.lr, betas=(args.b1, args.b2))
 
 
     # Schedular
@@ -196,8 +186,6 @@ def train(dev, world_size, config, args,
         scheduler_g = optim.lr_scheduler.LambdaLR(optimizer=optimizer_g,
                         lr_lambda=schedule)
         scheduler_d = optim.lr_scheduler.LambdaLR(optimizer=optimizer_d,
-                        lr_lambda=schedule)
-        scheduler_ep = optim.lr_scheduler.LambdaLR(optimizer=optimizer_ep,
                         lr_lambda=schedule)
 
 
@@ -218,11 +206,9 @@ def train(dev, world_size, config, args,
     # Set Device 
     EG = EG.to(dev)
     D = D.to(dev)
-    E_P = E_P.to(dev)
     vgg_per = VGG16Perceptual(args.path_vgg, args.vgg_target_layers).to(dev)
     utils.optimizer_to(optimizer_g, 'cuda:%d' % dev)
     utils.optimizer_to(optimizer_d, 'cuda:%d' % dev)
-    utils.optimizer_to(optimizer_ep, 'cuda:%d' % dev)
 
     # EMA
     ema_g = ExponentialMovingAverage(EG.parameters(), decay=args.decay_ema_g)
@@ -236,8 +222,6 @@ def train(dev, world_size, config, args,
     EG = DDP(EG, device_ids=[dev], 
              find_unused_parameters=True)
     D = DDP(D, device_ids=[dev], 
-            find_unused_parameters=False)
-    E_P = DDP(E_P, device_ids=[dev], 
             find_unused_parameters=False)
     vgg_per = DDP(vgg_per, device_ids=[dev], 
                   find_unused_parameters=True)
@@ -263,7 +247,6 @@ def train(dev, world_size, config, args,
         test_preset_id = None
         for i, data_sample in enumerate(tbar):
             EG.train()
-            E_P.train()
 
             x = data_sample['img']
             c = data_sample['class_idx']
@@ -290,9 +273,10 @@ def train(dev, world_size, config, args,
 
             # Generate fake image
             with autocast():
-                e_t_out, preset_emb, preset_vec = E_P(positive_reference, preset_id)
-                _, positive_emb, _ = E_P(r, preset_id)
-                fake = EG(x_gray, c, z, e_t_out)
+                fake, preset_vec, preset_emb, positive_emb = EG(x_gray, c, z, 
+                                                                r=positive_reference, 
+                                                                positive_reference=r, 
+                                                                preset_id=preset_id)
                 
 
             # DISCRIMINATOR 
@@ -321,24 +305,18 @@ def train(dev, world_size, config, args,
                                            args=args,
                                            fake=fake)
                 
-                
-
-            # scaler.scale(loss).backward(retain_graph=True)
-            scaler.scale(loss).backward()
-            scaler.step(optimizer_g)
-            scaler.update()
-
-            optimizer_ep.zero_grad()
-            with autocast():
                 loss_encoderT = loss_encoder_t(preset=preset_vec, 
                                                gth_preset=gth_preset, 
                                                preset_emb=preset_emb, 
                                                positive_ref_emb=positive_emb)
 
-            scaler.scale(loss_encoderT).backward()
-            scaler.step(optimizer_ep)
-            scaler.update()
                 
+                g_loss = loss + loss_encoderT
+
+            # scaler.scale(loss).backward(retain_graph=True)
+            scaler.scale(g_loss).backward()
+            scaler.step(optimizer_g)
+            scaler.update()
 
             # EMA
             if is_main_dev:
@@ -346,9 +324,9 @@ def train(dev, world_size, config, args,
 
             loss_dic['loss_d'] = loss_d
             
-            loss_generator = loss
-            loss_dis_train = loss_d
-            loss_encoder_t_train = loss_encoderT
+            loss_generator = loss.item()
+            loss_dis_train = loss_d.item()
+            loss_encoder_t_train = loss_encoderT.item()
 
             test_output = fake[0].add(1).div(2).detach().cpu()
             test_gt = real_images[0].detach().cpu()
@@ -360,7 +338,7 @@ def train(dev, world_size, config, args,
         print("Loss_g =", loss_generator)
         print("Loss_discriminator =", loss_dis_train)
         print("Loss_encoder_t =", loss_encoder_t_train)
-        # print("Loss EG =", loss_generator + loss_encoder_t_train)
+        print("Loss EG =", loss_generator + loss_encoder_t_train)
 
         # Save Model
         if is_main_dev:
@@ -383,7 +361,6 @@ def train(dev, world_size, config, args,
         if args.use_schedule:
             scheduler_d.step()
             scheduler_g.step()
-            scheduler_ep.step()
 
 
 def main():

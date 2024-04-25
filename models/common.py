@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
-from .encoders import (EncoderF_Res)
+from .encoders import (EncoderF_Res, EncoderF_Res_Preset)
 from .biggan import Generator
 from utils.common_utils import set_seed, rgb2lab, lab2rgb
 
@@ -115,8 +115,14 @@ class Colorizer(nn.Module):
                                   init=init_e,
                                   use_res=use_res,
                                   use_att=use_attention)
+            
+            self.ET = EncoderF_Res_Preset(norm=norm_type,
+                                        activation=activation,
+                                        init=init_e,
+                                        use_res=use_res,
+                                        use_att=use_attention)
 
-            self.id_mid_layer = 2  
+            self.id_mid_layer = 2
 
 
         else:
@@ -133,12 +139,14 @@ class Colorizer(nn.Module):
                 p.requires_grad = False
 
 
-    def forward(self, x_gray, c, z, embeded_encoder):
+    def forward(self, x_gray, c, z, r, positive_reference, preset_id):
         f = self.E(x_gray, self.G.shared(c))
-        f = f + embeded_encoder.clone()
+        e_t_out, preset_emb, preset_vec = self.ET(r, preset_id)
+        _, positive_emb, _ = self.ET(positive_reference, preset_id)
+        f = f + e_t_out
         output = self.G.forward_from(z, self.G.shared(c), 
                 self.id_mid_layer, f)
-        return output
+        return output, preset_vec, preset_emb, positive_emb
 
     def forward_test(self, x_gray, c, z, ref):
         f = self.E(x_gray, self.G.shared(c))[-1]
