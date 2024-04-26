@@ -257,7 +257,7 @@ def train(dev, world_size, config, args,
             real_images = data_sample['gth_img'].to(dev)
             # gth_preset = data_sample['gth_preset'].to(dev)
             preset_id = [eval(x) for x in data_sample['pairs'][-1]]
-            print("preset_id", preset_id)
+            # print("preset_id", preset_id)
             preset_id_embedding = torch.tensor(preset_id)
             positive_reference = data_sample['positive_reference'].to(dev)
 
@@ -271,7 +271,7 @@ def train(dev, world_size, config, args,
             # z = torch.zeros((args.size_batch, args.dim_z)).to(dev)
             # z.normal_(mean=0, std=0.8)
 
-            z = torch.nn.Embedding(400, 128)(preset_id_embedding)
+            z = torch.nn.Embedding(400, 119)(preset_id_embedding)
             z = z.to(dev)
 
             # Generate fake image

@@ -78,13 +78,14 @@ def main(args):
                             transforms.Resize((256,256)),
                             transforms.Grayscale()]))
 
-    ref = Image.open(path_ref)
-    custom_transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Resize(256),
-        transforms.CenterCrop(256)
-    ])
-    ref = custom_transform(ref)
+    # ref = Image.open(path_ref)
+    ref = path_ref
+    # custom_transform = transforms.Compose([
+    #     transforms.ToTensor(),
+    #     transforms.Resize(256),
+    #     transforms.CenterCrop(256)
+    # ])
+    # ref = custom_transform(ref)
 
     EG = Colorizer(config, 
                    args.path_ckpt_g,
@@ -146,14 +147,21 @@ def main(args):
         c = torch.LongTensor([c])
         x = x.unsqueeze(0)
         x, c = x.to(dev), c.to(dev)
-        r = ref.unsqueeze(0)
-        r = r.to(dev)
-        z = torch.zeros((1, args_loaded.dim_z)).to(dev)
-        z.normal_(mean=0, std=0.8)
+        # r = ref.unsqueeze(0)
+        # r = r.to(dev)
+        # z = torch.zeros((1, args_loaded.dim_z)).to(dev)
+        # z.normal_(mean=0, std=0.8)
+        # print(z.shape)
+        preset_id = torch.tensor([eval(ref)])
+        preset_id = torch.nn.Embedding(400, 119)(preset_id)
+        # preset_id = preset_id.unsqueeze(0)
+        preset_id = preset_id.to(dev)
+        z = preset_id
+        # print(z.shape)
         x_down = resizer(x)
 
         with torch.no_grad():
-            output, p_vec, _ = EG.forward_test(x_down, c, z, r)
+            output = EG(x_down, c, z)
             output = output.add(1).div(2)
 
         x = x.squeeze(0).cpu()
