@@ -285,7 +285,7 @@ class Netv2(nn.Module):
         _tmp = [2**(k)*32 for k in range(self.depth-1)]
         _tmp += [_tmp[-1]]
         pdims = [args.g_in_channels[0]] + _tmp
-        pddims = [4096, 2048, 1024, args.g_out_channels[0]]
+        pddims = [2048, 1024, args.g_out_channels[0]]
         enc_kernels = [[5,3]] + [[3,3] for k in range(self.depth-1)]
 
         print("P_Dims: {}\nPD_Dims: {}\nEnc_Kernels: {}".format(pdims, pddims, enc_kernels))
@@ -301,19 +301,17 @@ class Netv2(nn.Module):
 
         ## Linear Decoder
         img_size = args.crop_size[0]//2**(self.depth-1)
-        self.linear_in = img_size*img_size*768
+        self.linear_in = img_size*img_size*pdims[-1]
 
         self.pdfc1 = nn.Sequential(
             nn.Linear(self.linear_in, pddims[0]),
             nn.LeakyReLU(0.1),
             nn.Linear(pddims[0], pddims[1]),
-            nn.LeakyReLU(0.1),
-            nn.Linear(pddims[1], pddims[2]),
             nn.LeakyReLU(0.1)
         )
 
         self.pdfc2 = nn.Sequential(
-            nn.Linear(pddims[2], pddims[3]),
+            nn.Linear(pddims[1], pddims[2]),
             nn.Tanh()
         )
 
@@ -325,26 +323,10 @@ class Netv2(nn.Module):
         for i in range(self.depth):
             pout = getattr(self, 'pconv_{:d}'.format(i + 1))(pout)
 
+        pout_2 = self.final_adjust_conv(pout)
         ## Linear Decoder
         p_emb = self.pdfc1(pout.view(-1, self.linear_in))
 
         p_vec = self.pdfc2(p_emb)
 
-        return pout, p_vec, p_emb
-
-
-# z: ([batch, 17])
-# h: ([batch, 24576])
-# index 0 : ([batch, 1536, 4, 4])
-# index 1 : ([batch, 1536, 8, 8])
-# index 2 : ([batch, 768, 16, 16])
-# index 3 : ([batch, 768, 32, 32])
-# index 4 : ([batch, 384, 64, 64])
-# index 5 : ([batch, 192, 128, 128])
-# index 6: ([batch, 96, 256, 256])
-# result: ([batch, 3 256, 256])
-if __name__ == '__main__':
-    model = EncoderF_Res(use_att=True)
-    model.float()
-    y = model(torch.randn(4,1,256,256))
-    print(y.shape)
+        return pout_2, p_vec, p_emb

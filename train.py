@@ -255,7 +255,10 @@ def train(dev, world_size, config, args,
             x_gray = transforms.Grayscale()(x)
 
             real_images = data_sample['gth_img'].to(dev)
-            gth_preset = data_sample['gth_preset'].to(dev)
+            # gth_preset = data_sample['gth_preset'].to(dev)
+            preset_id = [eval(x) for x in data_sample['pairs'][-1]]
+            print("preset_id", preset_id)
+            preset_id_embedding = torch.tensor(preset_id)
             positive_reference = data_sample['positive_reference'].to(dev)
 
             #swap reference <-> positive_reference
@@ -265,14 +268,15 @@ def train(dev, world_size, config, args,
             # positive_reference = _tmp
 
             # Sample z
-            z = torch.zeros((args.size_batch, args.dim_z)).to(dev)
-            z.normal_(mean=0, std=0.8)
+            # z = torch.zeros((args.size_batch, args.dim_z)).to(dev)
+            # z.normal_(mean=0, std=0.8)
+
+            z = torch.nn.Embedding(400, 128)(preset_id_embedding)
+            z = z.to(dev)
 
             # Generate fake image
             with autocast():
-                fake, preset_vec, preset_emb, positive_emb = EG(x_gray, c, z, 
-                                                                r=positive_reference, 
-                                                                positive_reference=r)
+                fake = EG(x_gray, c, z)
                 
 
             # DISCRIMINATOR 
@@ -301,16 +305,11 @@ def train(dev, world_size, config, args,
                                            args=args,
                                            fake=fake)
                 
-                loss_encoderT = loss_encoder_t(preset=preset_vec, 
-                                               gth_preset=gth_preset, 
-                                               preset_emb=preset_emb, 
-                                               positive_ref_emb=positive_emb)
-
                 
-                g_loss = loss + loss_encoderT
+                # g_loss = loss
 
             # scaler.scale(loss).backward(retain_graph=True)
-            scaler.scale(g_loss).backward()
+            scaler.scale(loss).backward()
             scaler.step(optimizer_g)
             scaler.update()
 
@@ -322,7 +321,7 @@ def train(dev, world_size, config, args,
             
             loss_generator = loss.item()
             loss_dis_train = loss_d.item()
-            loss_encoder_t_train = loss_encoderT.item()
+            # loss_encoder_t_train = loss_encoderT.item()
 
             test_output = fake[0].add(1).div(2).detach().cpu()
             test_gt = real_images[0].detach().cpu()
@@ -333,8 +332,8 @@ def train(dev, world_size, config, args,
         
         print("Loss_g =", loss_generator)
         print("Loss_discriminator =", loss_dis_train)
-        print("Loss_encoder_t =", loss_encoder_t_train)
-        print("Loss EG =", loss_generator + loss_encoder_t_train)
+        # print("Loss_encoder_t =", loss_encoder_t_train)
+        # print("Loss EG =", loss_generator + loss_encoder_t_train)
 
         # Save Model
         if is_main_dev:
