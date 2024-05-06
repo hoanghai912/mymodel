@@ -170,10 +170,10 @@ def make_grid_multi(xs, nrow=4):
     return make_grid(torch.cat(xs, dim=0), nrow=nrow)
 
 
-def read_preset(db_root_dir, existing_pids_in_mode):
+def read_preset(db_root_dir, existing_pids_in_mode, path_keys):
     presets = {}
     # keys_emb = np.load("/data/manho/lc_data/keys.npy")
-    keys_emb = np.load("/content/mymodel/keys.npy")
+    keys_emb = np.load(path_keys)
     for pid in existing_pids_in_mode:
         with open(osp.join(db_root_dir, 'norm_presets', pid + '.json'), 'r') as json_file:
             presets[pid] = json.load(json_file)
@@ -183,17 +183,18 @@ def read_preset(db_root_dir, existing_pids_in_mode):
     return presets
 
 class PhotoSet(Dataset):
-    def __init__(self, db_root_dir, mode="train", random_diff=0.5, transform=None):
+    def __init__(self, db_root_dir, mode="train", random_diff=0.5, transform=None, path_keys=None):
 
         print('Initializing dataset ...')
         self.db_root_dir = db_root_dir
         self.p = random_diff
         self.transform = transform
         self.mode = mode
+        self.path_keys = path_keys
         random.seed(1024)
         
         # Initialize the per sequence images for online training
-        self.names, self.dirs, self.presets, self.class_idx_dict = self.init_photoset(self.db_root_dir, mode)
+        self.names, self.dirs, self.presets, self.class_idx_dict = self.init_photoset(self.db_root_dir, mode, self.path_keys)
         self.max_idx = len(self.names) - 1
         print('Data Root: {}\n# Original Images: {}\n# Images:{}\n# Presets:{}'.format(self.db_root_dir, self.max_idx+1, len(self.dirs), len(self.presets)))
         # print(self.names[:10])
@@ -259,7 +260,7 @@ class PhotoSet(Dataset):
         }, gth_preset, pairs, self.class_idx_dict[class_id]
 
     @staticmethod
-    def init_photoset(db_root_dir, mode):
+    def init_photoset(db_root_dir, mode, path_keys):
         names = [osp.basename(k) for k in glob.glob(osp.join(db_root_dir, mode, '0', '*', '*.jpg'))]
         # print(names)
         dirs = glob.glob(osp.join(db_root_dir, mode, '*', '*', '*.jpg'))
@@ -270,5 +271,5 @@ class PhotoSet(Dataset):
         class_idx_dict = ImageFolder(osp.join(db_root_dir, mode, '0')).class_to_idx
           
 
-        presets = read_preset(db_root_dir, existing_pids_in_mode)
+        presets = read_preset(db_root_dir, existing_pids_in_mode, path_keys)
         return names, dirs, presets, class_idx_dict

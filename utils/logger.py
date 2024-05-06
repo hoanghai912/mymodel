@@ -42,8 +42,8 @@ def make_log_ckpt(EG, D,
     fig.savefig("test_e{}_p{}.png".format(epoch, test_preset_id))
 
     
-    if epoch < 40:
-      return
+    # if epoch < 40:
+    #   return
     name = 'EG_%03d.ckpt' % epoch 
     path = join(path_ckpts, name) 
     torch.save(EG.state_dict(), path) 
