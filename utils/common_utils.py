@@ -183,7 +183,7 @@ def read_preset(db_root_dir, existing_pids_in_mode, path_keys):
     return presets
 
 class PhotoSet(Dataset):
-    def __init__(self, db_root_dir, mode="train", random_diff=0.5, transform=None, path_keys=None):
+    def __init__(self, db_root_dir, mode="train-400", random_diff=0.5, transform=None, path_keys=None):
 
         print('Initializing dataset ...')
         self.db_root_dir = db_root_dir
@@ -194,9 +194,9 @@ class PhotoSet(Dataset):
         random.seed(1024)
         
         # Initialize the per sequence images for online training
-        self.names, self.dirs, self.presets, self.class_idx_dict = self.init_photoset(self.db_root_dir, mode, self.path_keys)
+        self.names, self.dirs, self.class_idx_dict = self.init_photoset(self.db_root_dir, mode, self.path_keys)
         self.max_idx = len(self.names) - 1
-        print('Data Root: {}\n# Original Images: {}\n# Images:{}\n# Presets:{}'.format(self.db_root_dir, self.max_idx+1, len(self.dirs), len(self.presets)))
+        print('Data Root: {}\n# Original Images: {}\n# Images:{}\n# Presets:{}'.format(self.db_root_dir, self.max_idx+1, len(self.dirs), len(self.dirs) / self.max_idx+1))
         # print(self.names[:10])
 
     def __len__(self):
@@ -204,7 +204,7 @@ class PhotoSet(Dataset):
 
     def __getitem__(self, idx):
         _dir = self.dirs[idx]
-        samples, gth_preset, pairs, cls_id = self.read_data(_dir)
+        samples, pairs, cls_id = self.read_data(_dir)
         # samples['gth_preset'] = torch.from_numpy(gth_preset).float()
         # samples['pairs'] = pairs
         if self.transform is not None:
@@ -226,7 +226,7 @@ class PhotoSet(Dataset):
         preset_id = _dir.split('/')[-3]
         class_id = _dir.split('/')[-2]
 
-        if self.mode in ["train"]:
+        if self.mode in ["train-400"]:
             
             img_name = self.names[random.randint(0,self.max_idx)]
 
@@ -280,4 +280,4 @@ class PhotoSet(Dataset):
 
         # presets = read_preset(db_root_dir, existing_pids_in_mode, path_keys)
         presets = None
-        return names, dirs, presets, class_idx_dict
+        return names, dirs, class_idx_dict
