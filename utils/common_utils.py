@@ -215,7 +215,7 @@ class PhotoSet(Dataset):
             samples['gth_img'] = self.transform(samples['gth_img'])
         
         
-        samples['gth_preset'] = torch.from_numpy(gth_preset).float()
+        # samples['gth_preset'] = torch.from_numpy(gth_preset).float()
         samples['pairs'] = pairs
         samples['class_idx'] = cls_id
         return samples
@@ -248,16 +248,23 @@ class PhotoSet(Dataset):
                                   ,list(filter(lambda x: osp.basename(x) == self.names[pos_ref_idx], self.dirs))))[0]
         positive_ref = Image.open(positive_ref_dir)
 
-        gth_preset = self.presets[preset_id]
+        # gth_preset = self.presets[preset_id]
         pairs = [img_name, basename, preset_id]
 
         
+        # return {
+        #     'reference': np.array(reference),
+        #     'positive_reference': np.array(positive_ref),
+        #     'img':  np.array(img),
+        #     'gth_img': np.array(gth_img)
+        # }, gth_preset, pairs, self.class_idx_dict[class_id]
+    
         return {
             'reference': np.array(reference),
             'positive_reference': np.array(positive_ref),
             'img':  np.array(img),
             'gth_img': np.array(gth_img)
-        }, gth_preset, pairs, self.class_idx_dict[class_id]
+        }, pairs, self.class_idx_dict[class_id]
 
     @staticmethod
     def init_photoset(db_root_dir, mode, path_keys):
@@ -271,5 +278,6 @@ class PhotoSet(Dataset):
         class_idx_dict = ImageFolder(osp.join(db_root_dir, mode, '0')).class_to_idx
           
 
-        presets = read_preset(db_root_dir, existing_pids_in_mode, path_keys)
+        # presets = read_preset(db_root_dir, existing_pids_in_mode, path_keys)
+        presets = None
         return names, dirs, presets, class_idx_dict
