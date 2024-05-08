@@ -236,8 +236,8 @@ def train(dev, world_size, config, args,
 
     color_enhance = partial(color_enhacne_blend, factor=args.coef_enhance)
 
-    embed_layer = torch.nn.Embedding(100, args.dim_z, _freeze=True)
-    torch.save(embed_layer.weight.data, "embed.pt")
+    # embed_layer = torch.nn.Embedding(100, args.dim_z, _freeze=True)
+    # torch.save(embed_layer.weight.data, "embed.pt")
 
     # AMP
     scaler = GradScaler()
@@ -276,7 +276,7 @@ def train(dev, world_size, config, args,
             # z.normal_(mean=0, std=0.8)
 
             # z = torch.nn.Embedding(400, args.dim_z)(preset_id_embedding)
-            z = embed_layer(preset_id_embedding)
+            z = preset_id_embedding
             z = z.to(dev)
 
             # Generate fake image

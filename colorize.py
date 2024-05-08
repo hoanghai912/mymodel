@@ -152,11 +152,12 @@ def main(args):
         # z = torch.zeros((1, args_loaded.dim_z)).to(dev)
         # z.normal_(mean=0, std=0.8)
         # print(z.shape)
-        preset_id = torch.tensor([eval(ref)])
-        preset_id = torch.nn.Embedding(400, 119)(preset_id)
+        preset_id = torch.LongTensor([eval(ref)])
+        # preset_id = torch.nn.Embedding(400, 119)(preset_id)
         # preset_id = preset_id.unsqueeze(0)
-        preset_id = preset_id.to(dev)
+        # preset_id = preset_id.to(dev)
         z = preset_id
+        z = z.to(dev)
         # print(z.shape)
         x_down = resizer(x)
 
