@@ -15,16 +15,9 @@ def make_log_ckpt(EG, D,
                   test_output, test_gt, test_ref, test_preset_id):
     # Encoder&Generator
     lab_fusion = fusion(x_gray, test_output).squeeze(0).permute(1, 2, 0).numpy().astype(np.float32)
-    # print(lab_fusion.shape)
-    # im = ToPILImage()(lab_fusion)
-    # test_output = test_output.squeeze(0).permute(1, 2, 0).numpy()
     test_gt = test_gt.squeeze(0).permute(1, 2, 0).numpy().astype(np.float32)
     test_ref = test_ref.squeeze(0).permute(1, 2, 0).numpy().astype(np.float32)
-    # test_output = test_output.permute(1, 2, 0)
-    # plt.imsave('test_output_e{}_p{}.png'.format(epoch, test_preset_id), test_output)
-    # im.save('test_output_e{}_p{}.png'.format(epoch, test_preset_id))
-    # plt.imsave('test_gt_e{}_p{}.png'.format(epoch, test_preset_id), test_gt)
-    # plt.imsave('test_ref_{}.png'.format(epoch), test_ref)
+
 
     title_name = ["ref", "ground-truth","output"]
     fm = []

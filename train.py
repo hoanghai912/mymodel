@@ -133,6 +133,12 @@ def setup_dist(rank, world_size, port):
     # initialize the process group
     dist.init_process_group("nccl", rank=rank, world_size=world_size)
 
+def mapping(preset_ids):
+    res = []
+    dict = {0: 0, 18: 1, 34: 2, 89: 3}
+    for preset_id in preset_ids:
+        res.append(dict[preset_id])
+    return res
 
 def train(dev, world_size, config, args,
           dataset=None,
@@ -261,6 +267,7 @@ def train(dev, world_size, config, args,
             real_images = data_sample['gth_img'].to(dev)
             # gth_preset = data_sample['gth_preset'].to(dev)
             preset_id = [eval(x) for x in data_sample['pairs'][-1]]
+            preset_id = mapping(preset_id)
             # print("preset_id", preset_id)
             preset_id_embedding = torch.LongTensor(preset_id)
             positive_reference = data_sample['positive_reference'].to(dev)
@@ -323,16 +330,20 @@ def train(dev, world_size, config, args,
                 ema_g.update()
 
             loss_dic['loss_d'] = loss_d
-            
+
             loss_generator = loss.item()
             loss_dis_train = loss_d.item()
-            # loss_encoder_t_train = loss_encoderT.item()
+            if (num_iter % 1000 == 0):
+                # loss_encoder_t_train = loss_encoderT.item()
+                print("Loss_g =", loss_generator)
+                print("Loss_discriminator =", loss_dis_train)
 
             test_output = fake[0].add(1).div(2).detach().cpu()
             test_gt = real_images[0].detach().cpu()
             test_ref = positive_reference[0].detach().cpu()
             test_preset_id = data_sample['pairs'][-1][0]
             test_x_gray = x_gray[0].detach().cpu()
+
             num_iter += 1
         
         print("Loss_g =", loss_generator)

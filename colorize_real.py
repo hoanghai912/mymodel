@@ -1,4 +1,4 @@
-import os
+    import os
 from os import listdir
 from os.path import join, exists
 # from skimage.color import rgb2lab, lab2rgb
@@ -50,6 +50,12 @@ def parse():
 
     return parser.parse_args()
 
+def mapping(preset_ids):
+    res = []
+    dict = {0: 0, 18: 1, 34: 2, 89: 3}
+    for preset_id in preset_ids:
+        res.append(dict[preset_id])
+    return res
 
 def main(args):
 

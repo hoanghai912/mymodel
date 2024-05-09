@@ -27,7 +27,6 @@ def parse():
     parser.add_argument('--path_ckpt', default='/kaggle/working/ckpts/unknown')
     parser.add_argument('--path_output', default='./results')
     parser.add_argument('--path_imgnet_val', default='/content/sub-train/train/0')
-    parser.add_argument('--path_ref', default='')
 
     parser.add_argument('--use_ema', action='store_true')
     parser.add_argument('--no_upsample', action='store_true')
@@ -44,6 +43,12 @@ def parse():
 
     return parser.parse_args()
 
+def mapping(preset_ids):
+    res = []
+    dict = {0: 0, 18: 1, 34: 2, 89: 3}
+    for preset_id in preset_ids:
+        res.append(dict[preset_id])
+    return res
 
 def main(args):
     size_target = 256
@@ -152,7 +157,8 @@ def main(args):
         # z = torch.zeros((1, args_loaded.dim_z)).to(dev)
         # z.normal_(mean=0, std=0.8)
         # print(z.shape)
-        preset_id = torch.LongTensor([eval(ref)])
+        preset_id = mapping([eval(ref)])
+        preset_id = torch.LongTensor(preset_id)
         # preset_id = torch.nn.Embedding(400, 119)(preset_id)
         # preset_id = preset_id.unsqueeze(0)
         # preset_id = preset_id.to(dev)

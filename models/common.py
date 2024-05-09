@@ -151,7 +151,7 @@ class Colorizer(nn.Module):
             for p in self.G.parameters():
                 p.requires_grad = False
 
-        self.embed_layer = torch.nn.Embedding(100, 119)
+        self.embed_layer = torch.nn.Embedding(1000, 119)
 
 
     def forward(self, x_gray, c, z):
