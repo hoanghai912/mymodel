@@ -103,7 +103,7 @@ def parse_args():
     parser.add_argument('--loss_lpips', action='store_true', default=True)
     parser.add_argument('--loss_adv', action='store_true', default=True)
     parser.add_argument('--coef_mse', type=float, default=1.0)
-    parser.add_argument('--coef_lpips', type=float, default=0.5)
+    parser.add_argument('--coef_lpips', type=float, default=0.2)
     parser.add_argument('--coef_adv', type=float, default=0.03)
     parser.add_argument('--vgg_target_layers', type=int, nargs='+',
                             default=[1, 2, 13, 20])
@@ -333,10 +333,10 @@ def train(dev, world_size, config, args,
 
             loss_generator = loss.item()
             loss_dis_train = loss_d.item()
-            if (num_iter % 1000 == 0):
-                # loss_encoder_t_train = loss_encoderT.item()
-                print("Loss_g =", loss_generator)
-                print("Loss_discriminator =", loss_dis_train)
+            # if (num_iter % 1000 == 0):
+            #     # loss_encoder_t_train = loss_encoderT.item()
+            #     print("Loss_g =", loss_generator)
+            #     print("Loss_discriminator =", loss_dis_train)
 
             test_output = fake[0].add(1).div(2).detach().cpu()
             test_gt = real_images[0].detach().cpu()

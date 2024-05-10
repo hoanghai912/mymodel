@@ -27,6 +27,7 @@ def parse():
     parser.add_argument('--path_ckpt', default='/kaggle/working/ckpts/unknown')
     parser.add_argument('--path_output', default='./results')
     parser.add_argument('--path_imgnet_val', default='/content/sub-train/train/0')
+    parser.add_argument('--path_ref', default='')
 
     parser.add_argument('--use_ema', action='store_true')
     parser.add_argument('--no_upsample', action='store_true')

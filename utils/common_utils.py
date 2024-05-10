@@ -272,12 +272,12 @@ class PhotoSet(Dataset):
         # print(names)
         dirs = glob.glob(osp.join(db_root_dir, mode, '*', '*', '*.jpg'))
         # print(dirs)
-        existing_pids_in_mode = [osp.basename(k) for k in glob.glob(osp.join(db_root_dir, mode, '*'))]
+        # existing_pids_in_mode = [osp.basename(k) for k in glob.glob(osp.join(db_root_dir, mode, '*'))]
         # print(existing_pids_in_mode)
         
         class_idx_dict = ImageFolder(osp.join(db_root_dir, mode, '0')).class_to_idx
           
 
         # presets = read_preset(db_root_dir, existing_pids_in_mode, path_keys)
-        presets = None
+        # presets = None
         return names, dirs, class_idx_dict
