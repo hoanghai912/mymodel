@@ -196,7 +196,7 @@ class PhotoSet(Dataset):
         # Initialize the per sequence images for online training
         self.names, self.dirs, self.class_idx_dict = self.init_photoset(self.db_root_dir, mode, self.path_keys)
         self.max_idx = len(self.names) - 1
-        print('Data Root: {}\n# Original Images: {}\n# Images:{}\n# Presets:{}'.format(self.db_root_dir, self.max_idx+1, len(self.dirs), len(self.dirs) / self.max_idx+1))
+        print('Data Root: {}\n# Original Images: {}\n# Images:{}\n# Presets:{}'.format(self.db_root_dir, self.max_idx+1, len(self.dirs), len(self.dirs) / (self.max_idx+1)))
         # print(self.names[:10])
 
     def __len__(self):
