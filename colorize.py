@@ -15,6 +15,9 @@ from math import ceil
 
 from PIL import Image
 
+import json
+import timm
+
 
 def parse():
     parser = argparse.ArgumentParser()
@@ -27,7 +30,10 @@ def parse():
     parser.add_argument('--path_ckpt', default='/kaggle/working/ckpts/unknown')
     parser.add_argument('--path_output', default='./results')
     parser.add_argument('--path_imgnet_val', default='/content/sub-train/train/0')
-    parser.add_argument('--path_ref', default='')
+    parser.add_argument('--ref', default='')
+    parser.add_argument('--use_ref_image', action='store_true')
+    parser.add_argument('--use_classifier', action='store_true')
+    parser.add_argument('--classifier_path', default='')
 
     parser.add_argument('--use_ema', action='store_true')
     parser.add_argument('--no_upsample', action='store_true')
@@ -44,6 +50,27 @@ def parse():
 
     return parser.parse_args()
 
+def mapping(preset_ids):
+    res = []
+    dict = {0: 0, 18: 1, 34: 2, 89: 3}
+    for preset_id in preset_ids:
+        res.append(dict[preset_id])
+    return res
+
+def mapping_class(input_class, origin_json_path, new_class_path):
+    input_class = str(input_class)
+    f= open(origin_json_path)
+    data_origin = json.load(f)
+    f= open(new_class_path)
+    data_new = json.load(f)
+    f.close()
+    
+    mapping_1 = {}
+    for label, content in data_origin.items():
+        mapping_1[label] = content[0]
+    mapping_2 = data_new
+    
+    return mapping_2[mapping_1[input_class]]
 
 def main(args):
     size_target = 256
@@ -57,7 +84,7 @@ def main(args):
     path_eg_ema = join(args.path_ckpt, 'EG_EMA_%03d.ckpt' % args.epoch)
     path_args = join(args.path_ckpt, 'args.pkl')
 
-    path_ref = args.path_ref
+    path_ref = args.ref
 
     if not exists(path_eg):
         raise FileNotFoundError(path_eg)
@@ -72,11 +99,21 @@ def main(args):
 
     dev = args.device
 
+
     grays = ImageFolder(args.path_imgnet_val,
                         transform=transforms.Compose([
                             transforms.ToTensor(),
                             transforms.Resize((256,256)),
                             transforms.Grayscale()]))
+    
+    if (args.use_classifier):
+        classifier = timm.create_model(
+            "tf_efficientnet_l2_ns_475",
+            pretrained=True,
+            num_classes=1000
+            ).to(dev)
+        classifier.eval()
+
 
     # ref = Image.open(path_ref)
     ref = path_ref
@@ -143,19 +180,24 @@ def main(args):
             break
 
         size_original = x.shape[1:]
-
-        c = torch.LongTensor([c])
         x = x.unsqueeze(0)
-        x, c = x.to(dev), c.to(dev)
-        # r = ref.unsqueeze(0)
-        # r = r.to(dev)
-        # z = torch.zeros((1, args_loaded.dim_z)).to(dev)
-        # z.normal_(mean=0, std=0.8)
-        # print(z.shape)
-        preset_id = torch.LongTensor([eval(ref)])
-        # preset_id = torch.nn.Embedding(400, 119)(preset_id)
-        # preset_id = preset_id.unsqueeze(0)
-        # preset_id = preset_id.to(dev)
+        x = x.to(dev)
+        
+        if (args.use_classifier):
+            x_cls = x.repeat(1, 3, 1, 1)
+            x_cls = Resize((475, 475))(x_cls)
+            c = classifier(x_cls)
+            cs = torch.topk(c, 1)[1].reshape(-1)
+            c = mapping_class(int(cs), 
+                              args.classifier_path + "/original.json", 
+                              args.classifier_path + "/new_class.json")
+            
+        c = torch.LongTensor([c])
+        c = c.to(dev)
+
+        preset_id = [eval(ref)]
+        preset_id = torch.LongTensor(preset_id)
+
         z = preset_id
         z = z.to(dev)
         # print(z.shape)
