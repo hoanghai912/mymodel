@@ -352,7 +352,7 @@ def main(args):
         im = ToPILImage()(x_img)
 
         name = path.split('/')[-1].split('.')[0]
-        name = name + '_c%03d.jpg' % c.item()
+        # name = name + '_c%03d.jpg' % c.item()
 
         path_out = join(args.path_output, name)
         im.save(path_out)
