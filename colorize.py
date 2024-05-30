@@ -58,17 +58,24 @@ def mapping(preset_ids):
     return res
 
 def mapping_class(input_class, origin_json_path, new_class_path):
-    input_class = str(input_class)
     f= open(origin_json_path)
     data_origin = json.load(f)
     f= open(new_class_path)
     data_new = json.load(f)
     f.close()
     
+    # input_class = str(input_class)
+
     mapping_1 = {}
     for label, content in data_origin.items():
         mapping_1[label] = content[0]
     mapping_2 = data_new
+
+    for c in input_class:
+      c = str(int(c))
+      label = mapping_1[c]
+      if label in mapping_2:
+        return mapping_2[mapping_1[c]]
     
     return mapping_2[mapping_1[input_class]]
 
@@ -187,8 +194,8 @@ def main(args):
             x_cls = x.repeat(1, 3, 1, 1)
             x_cls = Resize((475, 475))(x_cls)
             c = classifier(x_cls)
-            cs = torch.topk(c, 1)[1].reshape(-1)
-            c = mapping_class(int(cs), 
+            cs = torch.topk(c, 10)[1].reshape(-1)
+            c = mapping_class(cs, 
                               args.classifier_path + "/original.json", 
                               args.classifier_path + "/new_class.json")
             
