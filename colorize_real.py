@@ -18,6 +18,72 @@ import timm
 from math import ceil
 import json
 
+import os.path as osp
+import glob
+import torch
+import torch.nn as nn
+from utils import *
+from networks.network import get_model
+from torchvision import datasets, models, transforms
+import torch.optim as optim
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+
+import sys
+
+class DeepPresetTest(object):
+    def __init__(self, ckpt, ckpt_2=""):
+        ckpt = torch.load(ckpt, map_location=torch.device('cpu'))
+        ckpt_2 = torch.load(ckpt_2, map_location=torch.device('cpu'))
+
+        # Load model
+        self.G = get_model(ckpt['opts'].g_net)(ckpt['opts'])
+
+        num_features = self.G.llayer_2[0].in_features
+        self.G.llayer_2 = nn.Sequential(
+          nn.Linear(num_features, 69),
+          nn.Tanh(),
+          nn.Linear(69, 4),
+          nn.LogSoftmax(dim=1)
+        )
+        
+        self.G.load_state_dict(ckpt_2)
+
+def predict_preset(ckpt, ckpt_2, path_ref):
+#   parser = argparse.ArgumentParser()
+#   parser.add_argument("--ckpt", type=str, default="/content/dp_woPPL.pth.tar", help='Checkpoint path')
+#   parser.add_argument("--ckpt_2", type=str, default="")
+#   parser.add_argument("--image_path", type=str, default="")
+#   args = parser.parse_args()
+  
+    deep_preset = DeepPresetTest(ckpt, ckpt_2)
+        
+    model = deep_preset.G
+
+    model.eval()
+
+    # print(model)
+  
+
+    train_transform = transforms.Compose([
+        transforms.RandomRotation(degrees=15),
+        transforms.RandomHorizontalFlip(),
+        transforms.Resize((352, 352)),
+        transforms.CenterCrop((352, 352)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+    ])
+
+    img_input = Image.open(path_ref)
+    img_input = train_transform(img_input)
+    img_input = img_input.unsqueeze(0)
+    # print("img_input", img_input.shape)
+
+    _, output, _ = model.stylize(img_input, img_input, None, preset_only=True)
+
+    ret, prediction = torch.max(output.data, 1)
+    print(int(prediction[0]))
+    return int(prediction[0])
 
 MODEL2SIZE = {'resnet50d': 224,
               'tf_efficientnet_l2_ns_475': 475}
@@ -34,6 +100,8 @@ def parse():
     parser.add_argument('--path_output', default='./results_real')
     parser.add_argument('--path_input', default='./resource/real_grays')
     parser.add_argument('--path_ref', default='')
+    # parser.add_argument("--ckpt", type=str, default="/content/dp_woPPL.pth.tar", help='Checkpoint path')
+    # parser.add_argument("--ckpt_2", type=str, default="")
 
     parser.add_argument('--use_ema', action='store_true')
     parser.add_argument('--use_rgb', action='store_true')
@@ -127,7 +195,7 @@ def main(args):
             num_classes=1000
             ).to(dev)
     classifier.eval()
-    size_cls = MODEL2SIZE[args.cls_model]
+    # size_cls = MODEL2SIZE[args.cls_model]
 
     if not os.path.exists(args.path_output):
         os.mkdir(args.path_output)
@@ -187,9 +255,12 @@ def main(args):
         c = torch.LongTensor([c])
         c = c.to(dev)
 
-        ref = args.path_ref
+        ref = predict_preset(os.path.join(args.path_ckpt, "dp_woPPL.pth.tar"), 
+                             os.path.join(args.path_ckpt, "model_7.pt"), 
+                             args.path_ref)
         if (ref == "0"): ref = "89"
         elif (ref == "89"): ref = "0"
+        print('ref', ref)
 
         preset_id = [eval(ref)]
         preset_id = torch.LongTensor(preset_id) 
