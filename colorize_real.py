@@ -49,14 +49,15 @@ class DeepPresetTest(object):
         
         self.G.load_state_dict(ckpt_2)
 
-def predict_preset(ckpt, ckpt_2, path_ref):
+def predict_preset(load_model, path_ref):
 #   parser = argparse.ArgumentParser()
 #   parser.add_argument("--ckpt", type=str, default="/content/dp_woPPL.pth.tar", help='Checkpoint path')
 #   parser.add_argument("--ckpt_2", type=str, default="")
 #   parser.add_argument("--image_path", type=str, default="")
 #   args = parser.parse_args()
   
-    deep_preset = DeepPresetTest(ckpt, ckpt_2)
+    # deep_preset = DeepPresetTest(ckpt, ckpt_2)
+    deep_preset = load_model
         
     model = deep_preset.G
 
@@ -82,7 +83,7 @@ def predict_preset(ckpt, ckpt_2, path_ref):
     _, output, _ = model.stylize(img_input, img_input, None, preset_only=True)
 
     ret, prediction = torch.max(output.data, 1)
-    print(int(prediction[0]))
+
     return int(prediction[0])
 
 MODEL2SIZE = {'resnet50d': 224,
@@ -183,6 +184,9 @@ def main(args):
     EG.eval()
     EG.float()
     EG.to(dev)
+
+    deep_preset = DeepPresetTest(os.path.join(args.path_ckpt, "dp_woPPL.pth.tar"), 
+                                  os.path.join(args.path_ckpt, "model_7.pt"))
     
     if args.use_ema:
         print('Use EMA')
@@ -229,6 +233,14 @@ def main(args):
     else:
         raise Exception('Invalid resize type')
 
+    ref = predict_preset(deep_preset, 
+                             args.path_ref)
+    if (ref == 0): ref = "89"
+    elif (ref == 1): ref = "0"
+    elif (ref == 2): ref= "34"
+    elif (ref == 3): ref = "18"
+    # print('ref', ref)
+
     for path in tqdm(paths):
         
         im = Image.open(path)
@@ -255,12 +267,13 @@ def main(args):
         c = torch.LongTensor([c])
         c = c.to(dev)
 
-        ref = predict_preset(os.path.join(args.path_ckpt, "dp_woPPL.pth.tar"), 
-                             os.path.join(args.path_ckpt, "model_7.pt"), 
-                             args.path_ref)
-        if (ref == "0"): ref = "89"
-        elif (ref == "89"): ref = "0"
-        print('ref', ref)
+        # ref = predict_preset(deep_preset, 
+        #                      args.path_ref)
+        # if (ref == 0): ref = "3"
+        # elif (ref == 1): ref = "18"
+        # elif (ref == 2): ref= "34"
+        # elif (ref == 3): ref = "0"
+        # print('ref', ref)
 
         preset_id = [eval(ref)]
         preset_id = torch.LongTensor(preset_id) 
