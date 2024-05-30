@@ -177,8 +177,13 @@ def main(args):
         c = mapping_class(int(cs), 
                             args.path_ckpt + "/original.json", 
                             args.path_ckpt + "/new_class.json")
-        c = torch.LongTensor([cs[0]]).to(dev)
+        c = torch.LongTensor([c])
+        c = c.to(dev)
 
+        preset_id = [eval(args.path_ref)]
+        preset_id = torch.LongTensor(preset_id) 
+        z = preset_id
+        z = z.to(dev)
         # for c in cs:
         # c = torch.LongTensor([c]).to(dev)
         x_resize = resizer(x)
