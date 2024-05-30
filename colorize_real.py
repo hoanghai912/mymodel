@@ -16,6 +16,7 @@ from utils.common_utils import set_seed, rgb2lab, lab2rgb
 from PIL import Image
 import timm
 from math import ceil
+import json
 
 
 MODEL2SIZE = {'resnet50d': 224,
@@ -32,6 +33,7 @@ def parse():
     parser.add_argument('--path_ckpt', default='./ckpts/baseline_1000')
     parser.add_argument('--path_output', default='./results_real')
     parser.add_argument('--path_input', default='./resource/real_grays')
+    parser.add_argument('--path_ref', default='')
 
     parser.add_argument('--use_ema', action='store_true')
     parser.add_argument('--use_rgb', action='store_true')
@@ -49,6 +51,22 @@ def parse():
     parser.add_argument('--cls_model', type=str, default='tf_efficientnet_l2_ns_475')
 
     return parser.parse_args()
+
+
+def mapping_class(input_class, origin_json_path, new_class_path):
+    input_class = str(input_class)
+    f= open(origin_json_path)
+    data_origin = json.load(f)
+    f= open(new_class_path)
+    data_new = json.load(f)
+    f.close()
+    
+    mapping_1 = {}
+    for label, content in data_origin.items():
+        mapping_1[label] = content[0]
+    mapping_2 = data_new
+    
+    return mapping_2[mapping_1[input_class]]
 
 
 def main(args):
@@ -154,86 +172,90 @@ def main(args):
         x_cls = x.repeat(1, 3, 1, 1)
         x_cls = Resize((size_cls, size_cls))(x_cls)
         c = classifier(x_cls)
-        cs = torch.topk(c, args.topk)[1].reshape(-1)
+        # cs = torch.topk(c, args.topk)[1].reshape(-1)
+        cs = torch.topk(c, 1)[1].reshape(-1)
+        c = mapping_class(int(cs), 
+                            args.path_ckpt + "/original.json", 
+                            args.path_ckpt + "/new_class.json")
         c = torch.LongTensor([cs[0]]).to(dev)
 
-        for c in cs:
-            c = torch.LongTensor([c]).to(dev)
-            x_resize = resizer(x)
+        # for c in cs:
+        # c = torch.LongTensor([c]).to(dev)
+        x_resize = resizer(x)
 
-            if args.type_resize == 'patch':
-                length = max(x_resize.shape[-2:])
-                num_patch = ceil(length / args.size_target)
-                direction = 'v' if x.shape[-1] < x.shape[-2] else 'h' 
+        if args.type_resize == 'patch':
+            length = max(x_resize.shape[-2:])
+            num_patch = ceil(length / args.size_target)
+            direction = 'v' if x.shape[-1] < x.shape[-2] else 'h' 
 
-                patchs = []
-                for i in range(num_patch):
-                    patch =  torch.zeros((args.size_target, args.size_target))
-                    if i + 1 == num_patch:  # last
-                        start = -args.size_target 
-                        end = length 
-                    else:
-                        start = i * args.size_target 
-                        end = (i + 1) * args.size_target
+            patchs = []
+            for i in range(num_patch):
+                patch =  torch.zeros((args.size_target, args.size_target))
+                if i + 1 == num_patch:  # last
+                    start = -args.size_target 
+                    end = length 
+                else:
+                    start = i * args.size_target 
+                    end = (i + 1) * args.size_target
 
-                    if direction == 'v':
-                        patch = x_resize[..., start:end, :]
-                    elif direction == 'h':
-                        patch = x_resize[..., :, start:end]
-                    else:
-                        raise Exception('Invalid direction')
-                    patchs.append(patch)
+                if direction == 'v':
+                    patch = x_resize[..., start:end, :]
+                elif direction == 'h':
+                    patch = x_resize[..., :, start:end]
+                else:
+                    raise Exception('Invalid direction')
+                patchs.append(patch)
 
-                outputs = [EG(patch, c, z).add(1).div(2) for patch in patchs]
-                cloth = torch.zeros((1, 3, x_resize.shape[-2],
-                                           x_resize.shape[-1]))
-                for i in range(num_patch):
-                    output = outputs[i]
-                    if i + 1 == num_patch:  # last
-                        start = -args.size_target 
-                        end = length 
-                    else:
-                        start = i * args.size_target 
-                        end = (i + 1) * args.size_target
+            outputs = [EG(patch, c, z).add(1).div(2) for patch in patchs]
+            cloth = torch.zeros((1, 3, x_resize.shape[-2],
+                                        x_resize.shape[-1]))
+            for i in range(num_patch):
+                output = outputs[i]
+                if i + 1 == num_patch:  # last
+                    start = -args.size_target 
+                    end = length 
+                else:
+                    start = i * args.size_target 
+                    end = (i + 1) * args.size_target
 
-                    if direction == 'v':
-                        cloth[..., start:end, :] = output
-                    elif direction == 'h':
-                        cloth[..., :, start:end] = output
-                    else:
-                        raise Exception('Invalid direction')
+                if direction == 'v':
+                    cloth[..., start:end, :] = output
+                elif direction == 'h':
+                    cloth[..., :, start:end] = output
+                else:
+                    raise Exception('Invalid direction')
 
-                output = cloth
-                im = ToPILImage()(output.squeeze(0))
-                im.show()
-                raise NotImplementedError()
+            output = cloth
+            im = ToPILImage()(output.squeeze(0))
+            im.show()
+            raise NotImplementedError()
 
-            with torch.no_grad():
-                output = EG(x_resize, c, z)
-                output = output.add(1).div(2)
+        with torch.no_grad():
+            output = EG(x_resize, c, z)
+            output = output.add(1).div(2)
 
-            if args.no_upsample:
-                size_output = x_resize.shape[-2:]
-                x_rs = x_resize.squeeze(0).cpu()
-            else:
-                size_output = size
-                x_rs = x.squeeze(0).cpu()
+        if args.no_upsample:
+            size_output = x_resize.shape[-2:]
+            x_rs = x_resize.squeeze(0).cpu()
+        else:
+            size_output = size
+            x_rs = x.squeeze(0).cpu()
 
-            output = transforms.Resize(size_output)(output)
-            output = output.squeeze(0)
-            output = output.detach().cpu()
+        output = transforms.Resize(size_output)(output)
+        output = output.squeeze(0)
+        output = output.detach().cpu()
 
-            if args.use_rgb:
-                x_img = output
-            else:
-                x_img = fusion(x_rs, output)
-            im = ToPILImage()(x_img)
+        if args.use_rgb:
+            x_img = output
+        else:
+            x_img = fusion(x_rs, output)
+        im = ToPILImage()(x_img)
 
-            name = path.split('/')[-1].split('.')[0]
-            name = name + '_c%03d.jpg' % c.item()
+        name = path.split('/')[-1].split('.')[0]
+        name = name + '_c%03d.jpg' % c.item()
 
-            path_out = join(args.path_output, name)
-            im.save(path_out)
+        path_out = join(args.path_output, name)
+        im.save(path_out)
 
 
 def fusion(img_gray, img_rgb):
